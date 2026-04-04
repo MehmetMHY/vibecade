@@ -1,0 +1,1366 @@
+<!doctype html>
+<!--
+Transcendental - An algorithmic art visualization of Pi
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transcendental</title>
+    <link rel="icon" type="image/png" href="./logo.png" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        font-family: "Inter", Arial, sans-serif;
+        background-color: #000;
+        color: #fff;
+        overflow: hidden;
+      }
+
+      .container {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        display: block;
+      }
+
+      .controls-panel {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: 340px;
+        background-color: rgba(20, 20, 20, 0.85);
+        backdrop-filter: blur(5px);
+        border-top-left-radius: 12px;
+        padding: 20px;
+        z-index: 10;
+        transition: transform 0.3s ease-in-out;
+        transform: translateY(100%);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .controls-panel.visible {
+        transform: translateY(0);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .controls button {
+        padding: 6px;
+        background-color: #333;
+        color: white;
+        border: 1px solid #555;
+        border-radius: 6px;
+        cursor: pointer;
+        transition:
+          background-color 0.2s,
+          transform 0.1s;
+        font-size: 11px;
+        text-align: center;
+        min-width: 0;
+      }
+
+      .controls button:hover {
+        background-color: #444;
+      }
+      .controls button:active {
+        transform: scale(0.95);
+      }
+
+      .credit-button {
+        font-weight: bold;
+        background-color: #d4af37;
+        color: #000;
+      }
+
+      .credit-button:hover {
+        background-color: #f1ca59;
+      }
+
+      .slider-container {
+        width: 100%;
+        margin: 10px 0;
+      }
+
+      .slider-row {
+        display: flex;
+        align-items: center;
+        margin: 15px 0;
+      }
+
+      .slider-label {
+        width: 160px;
+        margin-right: 10px;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      .slider {
+        flex-grow: 1;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 8px;
+        background: #555;
+        border-radius: 4px;
+        outline: none;
+      }
+      .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: #007aff;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+      .slider::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        background: #007aff;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+      }
+
+      .slider-value {
+        width: 50px;
+        margin-left: 10px;
+        text-align: right;
+        font-size: 14px;
+        background-color: #222;
+        padding: 3px 6px;
+        border-radius: 4px;
+        display: none;
+      }
+
+      .slider-input {
+        width: 50px;
+        margin-left: 10px;
+        text-align: right;
+        font-size: 14px;
+        background-color: #222;
+        color: #fff;
+        padding: 3px 6px;
+        border-radius: 4px;
+        border: 1px solid #444;
+        outline: none;
+      }
+
+      .slider-input:focus {
+        border-color: #007aff;
+      }
+
+      .toggle-controls {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background-color: rgba(30, 30, 30, 0.8);
+        backdrop-filter: blur(5px);
+        border: 1px solid #555;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 11;
+        font-size: 24px;
+        transition: background-color 0.2s;
+      }
+      .toggle-controls:hover {
+        background-color: rgba(50, 50, 50, 0.9);
+      }
+
+      /* Hidden file input */
+      .file-input {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <canvas id="canvas"></canvas>
+
+      <div class="toggle-controls" id="toggle-controls">⚙️</div>
+
+      <div class="controls-panel" id="controls-panel">
+        <div class="controls">
+          <button id="play-pause">Pause</button>
+          <button id="reset">Reset Sim</button>
+          <button id="toggle-trail">Hide Trail</button>
+          <button id="toggle-arms">Hide Arms</button>
+          <button id="toggle-pause-arms">Hide Arms When Paused</button>
+          <button id="reset-defaults">Reset Defaults</button>
+          <button id="randomize-settings">Randomize</button>
+          <button id="download-settings">Save Settings</button>
+          <button id="load-settings">Load Settings</button>
+          <input
+            type="file"
+            id="settings-file-input"
+            class="file-input"
+            accept=".json"
+          />
+          <button id="download-image">Download Image</button>
+          <button id="clear-screen">Clear Screen</button>
+          <button id="credit" class="credit-button">⭐ Credit</button>
+          <button id="toggle-pixel-mode">Pixel Mode: Off</button>
+          <button id="code-button">Code</button>
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-row">
+            <div class="slider-label">Speed:</div>
+            <input
+              type="range"
+              min="1"
+              max="1000"
+              value="50"
+              class="slider"
+              id="speed-slider"
+            />
+            <div class="slider-value" id="speed-value">50</div>
+            <input
+              type="text"
+              class="slider-input"
+              id="speed-input"
+              value="50"
+              data-min="1"
+              data-max="1000"
+            />
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-label">Inner Arm (L1):</div>
+            <input
+              type="range"
+              min="10"
+              max="500"
+              value="120"
+              class="slider"
+              id="inner-length-slider"
+            />
+            <div class="slider-value" id="inner-length-value">120</div>
+            <input
+              type="text"
+              class="slider-input"
+              id="inner-length-input"
+              value="120"
+              data-min="10"
+              data-max="500"
+            />
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-label">Outer Arm (L2):</div>
+            <input
+              type="range"
+              min="10"
+              max="500"
+              value="120"
+              class="slider"
+              id="outer-length-slider"
+            />
+            <div class="slider-value" id="outer-length-value">120</div>
+            <input
+              type="text"
+              class="slider-input"
+              id="outer-length-input"
+              value="120"
+              data-min="10"
+              data-max="500"
+            />
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-label">Trail Length:</div>
+            <input
+              type="range"
+              min="100"
+              max="50000"
+              value="2000"
+              class="slider"
+              id="trail-slider"
+            />
+            <div class="slider-value" id="trail-value">2000</div>
+            <input
+              type="text"
+              class="slider-input"
+              id="trail-input"
+              value="2000"
+              data-min="100"
+              data-max="50000"
+            />
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-label">Arm Draw Skip:</div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value="0"
+              class="slider"
+              id="arm-draw-skip-slider"
+            />
+            <div class="slider-value" id="arm-draw-skip-value">0</div>
+            <input
+              type="text"
+              class="slider-input"
+              id="arm-draw-skip-input"
+              value="0"
+              data-min="0"
+              data-max="100"
+            />
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-label">Line Thickness:</div>
+            <input
+              type="range"
+              min="0.1"
+              max="10"
+              value="1.5"
+              step="0.1"
+              class="slider"
+              id="line-width-slider"
+            />
+            <div class="slider-value" id="line-width-value">1.5</div>
+            <input
+              type="text"
+              class="slider-input"
+              id="line-width-input"
+              value="1.5"
+              data-min="0.1"
+              data-max="10"
+              data-step="0.1"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const playPauseBtn = document.getElementById("play-pause");
+      const resetBtn = document.getElementById("reset");
+      const toggleTrailBtn = document.getElementById("toggle-trail");
+      const toggleArmsBtn = document.getElementById("toggle-arms");
+      const togglePauseArmsBtn = document.getElementById("toggle-pause-arms");
+      const toggleControlsBtn = document.getElementById("toggle-controls");
+      const controlsPanel = document.getElementById("controls-panel");
+      const downloadSettingsBtn = document.getElementById("download-settings");
+      const loadSettingsBtn = document.getElementById("load-settings");
+      const settingsFileInput = document.getElementById("settings-file-input");
+      const resetDefaultsBtn = document.getElementById("reset-defaults");
+      const randomizeSettingsBtn =
+        document.getElementById("randomize-settings");
+      const downloadImageBtn = document.getElementById("download-image");
+      const clearScreenBtn = document.getElementById("clear-screen");
+      const creditBtn = document.getElementById("credit");
+      const togglePixelModeBtn = document.getElementById("toggle-pixel-mode");
+      const codeButton = document.getElementById("code-button");
+
+      const speedSlider = document.getElementById("speed-slider");
+      const innerLengthSlider = document.getElementById("inner-length-slider");
+      const outerLengthSlider = document.getElementById("outer-length-slider");
+      const trailSlider = document.getElementById("trail-slider");
+      const armDrawSkipSlider = document.getElementById("arm-draw-skip-slider");
+      const lineWidthSlider = document.getElementById("line-width-slider");
+
+      const speedValue = document.getElementById("speed-value");
+      const innerLengthValue = document.getElementById("inner-length-value");
+      const outerLengthValue = document.getElementById("outer-length-value");
+      const trailValue = document.getElementById("trail-value");
+      const armDrawSkipValue = document.getElementById("arm-draw-skip-value");
+      const lineWidthValue = document.getElementById("line-width-value");
+
+      const speedInput = document.getElementById("speed-input");
+      const innerLengthInput = document.getElementById("inner-length-input");
+      const outerLengthInput = document.getElementById("outer-length-input");
+      const trailInput = document.getElementById("trail-input");
+      const armDrawSkipInput = document.getElementById("arm-draw-skip-input");
+      const lineWidthInput = document.getElementById("line-width-input");
+
+      // default settings
+      const DEFAULT_SETTINGS = {
+        speed: 50,
+        innerArmLength: 120,
+        outerArmLength: 120,
+        trailLength: 2000,
+        showTrail: true,
+        showArms: true,
+        hideArmsWhenPaused: false,
+        armDrawSkipFrames: 0,
+        lineWidth: 1.5,
+      };
+
+      // app state
+      let animationId;
+      let isPlaying = true;
+      let showTrail = DEFAULT_SETTINGS.showTrail;
+      let showArms = DEFAULT_SETTINGS.showArms;
+      let hideArmsWhenPaused = DEFAULT_SETTINGS.hideArmsWhenPaused;
+      let showControls = false;
+      let pixelMode = false;
+      let theta = 0;
+      let trail = [];
+      let trailIndex = 0;
+      let maxTrailLength = DEFAULT_SETTINGS.trailLength;
+
+      let animationFrameCounter = 0;
+      let trailSkipFrames = 0;
+      let armDrawSkipFrames = DEFAULT_SETTINGS.armDrawSkipFrames;
+      let currentLineWidth = DEFAULT_SETTINGS.lineWidth;
+
+      // for pixel mode
+      let trailCanvas;
+      let trailCtx;
+
+      // initialize canvas size
+      function setupCanvas() {
+        const oldWidth = canvas.width || window.innerWidth;
+        const oldHeight = canvas.height || window.innerHeight;
+        const oldCenterX = oldWidth / 2;
+        const oldCenterY = oldHeight / 2;
+
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
+        const newCenterX = newWidth / 2;
+        const newCenterY = newHeight / 2;
+
+        // calculate offsets for repositioning trail points
+        const offsetX = newCenterX - oldCenterX;
+        const offsetY = newCenterY - oldCenterY;
+
+        // update canvas dimensions
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+
+        // reposition all trail points relative to new center
+        for (let i = 0; i < trail.length; i++) {
+          if (trail[i]) {
+            trail[i].x += offsetX;
+            trail[i].y += offsetY;
+          }
+        }
+
+        // initialize or resize pixel mode canvas
+        if (!trailCanvas) {
+          trailCanvas = document.createElement("canvas");
+          trailCtx = trailCanvas.getContext("2d", { willReadFrequently: true });
+        }
+
+        // if switching modes or resizing, we need to setup the pixel canvas
+        const pixelCanvasNeedsSetup =
+          !trailCanvas ||
+          trailCanvas.width !== newWidth ||
+          trailCanvas.height !== newHeight;
+
+        if (pixelCanvasNeedsSetup) {
+          // save current content if it exists
+          let tempImg;
+          if (trailCanvas.width > 0 && trailCanvas.height > 0) {
+            tempImg = document.createElement("canvas");
+            const tempCtx = tempImg.getContext("2d");
+            tempImg.width = trailCanvas.width;
+            tempImg.height = trailCanvas.height;
+            tempCtx.drawImage(trailCanvas, 0, 0);
+          }
+
+          // resize pixel canvas
+          trailCanvas.width = newWidth;
+          trailCanvas.height = newHeight;
+          trailCtx.fillStyle = "#000";
+          trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+
+          // restore content if we had any
+          if (tempImg) {
+            trailCtx.drawImage(tempImg, 0, 0);
+          }
+        }
+      }
+
+      // app parameters
+      let innerArmLength, outerArmLength, speed;
+
+      function debounce(func, delay) {
+        let timeout;
+        return function (...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+      }
+
+      // setup event listeners
+      function setupEventListeners() {
+        playPauseBtn.addEventListener("click", togglePlayPause);
+        resetBtn.addEventListener("click", resetAnimation);
+        toggleTrailBtn.addEventListener("click", toggleTrail);
+        toggleArmsBtn.addEventListener("click", toggleArms);
+        togglePauseArmsBtn.addEventListener("click", togglePauseArms);
+        toggleControlsBtn.addEventListener("click", toggleControls);
+        downloadSettingsBtn.addEventListener("click", downloadSettings);
+        loadSettingsBtn.addEventListener("click", () =>
+          settingsFileInput.click(),
+        );
+        settingsFileInput.addEventListener("change", loadSettingsFromFile);
+        resetDefaultsBtn.addEventListener("click", resetToDefaultSettings);
+        randomizeSettingsBtn.addEventListener("click", setRandomSettings);
+        downloadImageBtn.addEventListener("click", downloadCanvasAsImage);
+        clearScreenBtn.addEventListener("click", clearScreen);
+        creditBtn.addEventListener("click", openCreditLink);
+        togglePixelModeBtn.addEventListener("click", togglePixelMode);
+        codeButton.addEventListener("click", openCodeLink);
+
+        speedSlider.addEventListener("input", updateSpeed);
+        innerLengthSlider.addEventListener("input", updateInnerLength);
+        outerLengthSlider.addEventListener("input", updateOuterLength);
+        trailSlider.addEventListener("input", updateTrailLength);
+        armDrawSkipSlider.addEventListener("input", updateArmDrawSkipFrames);
+        lineWidthSlider.addEventListener("input", updateLineWidth);
+
+        // add listeners for text inputs
+        speedInput.addEventListener("change", updateSpeedFromInput);
+        innerLengthInput.addEventListener("change", updateInnerLengthFromInput);
+        outerLengthInput.addEventListener("change", updateOuterLengthFromInput);
+        trailInput.addEventListener("change", updateTrailLengthFromInput);
+        armDrawSkipInput.addEventListener("change", updateArmDrawSkipFromInput);
+        lineWidthInput.addEventListener("change", updateLineWidthFromInput);
+
+        // add blur events to apply changes when focus leaves the input
+        speedInput.addEventListener("blur", updateSpeedFromInput);
+        innerLengthInput.addEventListener("blur", updateInnerLengthFromInput);
+        outerLengthInput.addEventListener("blur", updateOuterLengthFromInput);
+        trailInput.addEventListener("blur", updateTrailLengthFromInput);
+        armDrawSkipInput.addEventListener("blur", updateArmDrawSkipFromInput);
+        lineWidthInput.addEventListener("blur", updateLineWidthFromInput);
+
+        window.addEventListener("resize", debounce(setupCanvas, 150));
+      }
+
+      // settings update functions
+      function updateSpeed() {
+        const val = parseInt(speedSlider.value, 10);
+        speedValue.textContent = val;
+        speedInput.value = val;
+        speed = val / 1000;
+      }
+
+      function updateSpeedFromInput() {
+        const val = validateNumberInput(speedInput);
+        speedInput.value = val;
+        speedSlider.value = val;
+        speedValue.textContent = val;
+        speed = val / 1000;
+      }
+
+      function updateInnerLength() {
+        const val = parseInt(innerLengthSlider.value, 10);
+        innerLengthValue.textContent = val;
+        innerLengthInput.value = val;
+        innerArmLength = val;
+      }
+
+      function updateInnerLengthFromInput() {
+        const val = validateNumberInput(innerLengthInput);
+        innerLengthInput.value = val;
+        innerLengthSlider.value = val;
+        innerLengthValue.textContent = val;
+        innerArmLength = val;
+      }
+
+      function updateOuterLength() {
+        const val = parseInt(outerLengthSlider.value, 10);
+        outerLengthValue.textContent = val;
+        outerLengthInput.value = val;
+        outerArmLength = val;
+      }
+
+      function updateOuterLengthFromInput() {
+        const val = validateNumberInput(outerLengthInput);
+        outerLengthInput.value = val;
+        outerLengthSlider.value = val;
+        outerLengthValue.textContent = val;
+        outerArmLength = val;
+      }
+
+      function updateTrailLength() {
+        trailValue.textContent = trailSlider.value;
+        trailInput.value = trailSlider.value;
+        maxTrailLength = parseInt(trailSlider.value, 10);
+      }
+
+      function updateTrailLengthFromInput() {
+        const val = validateNumberInput(trailInput);
+        trailInput.value = val;
+        trailSlider.value = val;
+        trailValue.textContent = val;
+        maxTrailLength = val;
+      }
+
+      function updateArmDrawSkipFrames() {
+        const val = parseInt(armDrawSkipSlider.value, 10);
+        armDrawSkipValue.textContent = val;
+        armDrawSkipInput.value = val;
+        armDrawSkipFrames = val;
+      }
+
+      function updateArmDrawSkipFromInput() {
+        const val = validateNumberInput(armDrawSkipInput);
+        armDrawSkipInput.value = val;
+        armDrawSkipSlider.value = val;
+        armDrawSkipValue.textContent = val;
+        armDrawSkipFrames = val;
+      }
+
+      function updateLineWidth() {
+        const val = parseFloat(lineWidthSlider.value);
+        lineWidthValue.textContent = val.toFixed(1);
+        lineWidthInput.value = val.toFixed(1);
+        currentLineWidth = val;
+      }
+
+      function updateLineWidthFromInput() {
+        const val = validateNumberInput(lineWidthInput, true);
+        const formattedVal = val.toFixed(1);
+        lineWidthInput.value = formattedVal;
+        lineWidthSlider.value = val;
+        lineWidthValue.textContent = formattedVal;
+        currentLineWidth = val;
+      }
+
+      // control button handlers
+      function togglePlayPause() {
+        isPlaying = !isPlaying;
+        playPauseBtn.textContent = isPlaying ? "Pause" : "Play";
+
+        if (isPlaying) {
+          animate();
+        } else {
+          cancelAnimationFrame(animationId);
+
+          // when hideArmsWhenPaused is true, redraw the scene without arms
+          if (hideArmsWhenPaused && showArms) {
+            drawBackground();
+            drawTrailOptimized();
+          }
+        }
+      }
+
+      function resetAnimation() {
+        theta = 0;
+        trail = new Array(maxTrailLength);
+        trailIndex = 0;
+        animationFrameCounter = 0;
+
+        drawBackground();
+        if (showArms) {
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
+          const initialInnerEndX = centerX + innerArmLength * Math.cos(0);
+          const initialInnerEndY = centerY + innerArmLength * Math.sin(0);
+          const initialOuterEndX =
+            initialInnerEndX + outerArmLength * Math.cos(0);
+          const initialOuterEndY =
+            initialInnerEndY + outerArmLength * Math.sin(0);
+          const tempLineWidth = ctx.lineWidth;
+          ctx.lineWidth = currentLineWidth;
+          drawArms(
+            centerX,
+            centerY,
+            initialInnerEndX,
+            initialInnerEndY,
+            initialOuterEndX,
+            initialOuterEndY,
+          );
+          ctx.lineWidth = tempLineWidth;
+        }
+
+        if (isPlaying) {
+          cancelAnimationFrame(animationId);
+          animate();
+        }
+      }
+
+      function toggleTrail() {
+        showTrail = !showTrail;
+        toggleTrailBtn.textContent = showTrail ? "Hide Trail" : "Show Trail";
+      }
+
+      function toggleArms() {
+        showArms = !showArms;
+        toggleArmsBtn.textContent = showArms ? "Hide Arms" : "Show Arms";
+
+        // when paused and arms were just enabled or disabled, refresh the display
+        if (!isPlaying) {
+          drawBackground();
+          drawTrailOptimized();
+
+          // only draw arms if showArms is true and we're not hiding arms when paused
+          if (showArms && !hideArmsWhenPaused) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const innerEndX = centerX + innerArmLength * Math.cos(theta);
+            const innerEndY = centerY + innerArmLength * Math.sin(theta);
+            const outerEndX =
+              innerEndX + outerArmLength * Math.cos(Math.PI * theta);
+            const outerEndY =
+              innerEndY + outerArmLength * Math.sin(Math.PI * theta);
+            drawArms(
+              centerX,
+              centerY,
+              innerEndX,
+              innerEndY,
+              outerEndX,
+              outerEndY,
+            );
+          }
+        }
+      }
+
+      function togglePauseArms() {
+        hideArmsWhenPaused = !hideArmsWhenPaused;
+        togglePauseArmsBtn.textContent = hideArmsWhenPaused
+          ? "Show Arms When Paused"
+          : "Hide Arms When Paused";
+
+        // when currently paused, update the display to reflect the new setting
+        if (!isPlaying) {
+          drawBackground();
+          drawTrailOptimized();
+
+          // draw arms only if they should be visible
+          if (showArms && !hideArmsWhenPaused) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const innerEndX = centerX + innerArmLength * Math.cos(theta);
+            const innerEndY = centerY + innerArmLength * Math.sin(theta);
+            const outerEndX =
+              innerEndX + outerArmLength * Math.cos(Math.PI * theta);
+            const outerEndY =
+              innerEndY + outerArmLength * Math.sin(Math.PI * theta);
+            drawArms(
+              centerX,
+              centerY,
+              innerEndX,
+              innerEndY,
+              outerEndX,
+              outerEndY,
+            );
+          }
+        }
+      }
+
+      function toggleControls() {
+        showControls = !showControls;
+        controlsPanel.classList.toggle("visible", showControls);
+      }
+
+      function togglePixelMode() {
+        pixelMode = !pixelMode;
+        togglePixelModeBtn.textContent = pixelMode
+          ? "Pixel Mode: On"
+          : "Pixel Mode: Off";
+
+        // when switching to pixel mode, initialize the trail canvas if it doesn't exist
+        if (pixelMode && (!trailCanvas || !trailCtx)) {
+          trailCanvas = document.createElement("canvas");
+          trailCtx = trailCanvas.getContext("2d", { willReadFrequently: true });
+          trailCanvas.width = canvas.width;
+          trailCanvas.height = canvas.height;
+          trailCtx.fillStyle = "#000";
+          trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+        }
+
+        // clear the current visualization and start fresh
+        clearScreen();
+      }
+
+      function downloadSettings() {
+        const settings = {
+          timestamp: Date.now(),
+          speed: parseInt(speedSlider.value, 10),
+          innerArmLength: parseInt(innerLengthSlider.value, 10),
+          outerArmLength: parseInt(outerLengthSlider.value, 10),
+          trailLength: parseInt(trailSlider.value, 10),
+          armDrawSkipFrames: parseInt(armDrawSkipSlider.value, 10),
+          lineWidth: parseFloat(lineWidthSlider.value),
+          showTrail: showTrail,
+          showArms: showArms,
+          hideArmsWhenPaused: hideArmsWhenPaused,
+          pixelMode: pixelMode,
+        };
+
+        // log settings to console in case download is blocked
+        console.log("Pi Visualization Settings:", settings);
+
+        const uuid = crypto.randomUUID
+          ? crypto.randomUUID()
+          : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+              (
+                c ^
+                (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+              ).toString(16),
+            );
+
+        const settingsJSON = JSON.stringify(settings, null, 2);
+        const blob = new Blob([settingsJSON], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `pi_viz_settings_${uuid}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+      }
+
+      function resetToDefaultSettings() {
+        speedSlider.value = DEFAULT_SETTINGS.speed;
+        innerLengthSlider.value = DEFAULT_SETTINGS.innerArmLength;
+        outerLengthSlider.value = DEFAULT_SETTINGS.outerArmLength;
+        trailSlider.value = DEFAULT_SETTINGS.trailLength;
+        armDrawSkipSlider.value = DEFAULT_SETTINGS.armDrawSkipFrames;
+        lineWidthSlider.value = DEFAULT_SETTINGS.lineWidth;
+
+        showTrail = DEFAULT_SETTINGS.showTrail;
+        showArms = DEFAULT_SETTINGS.showArms;
+        hideArmsWhenPaused = DEFAULT_SETTINGS.hideArmsWhenPaused;
+        pixelMode = false;
+
+        toggleTrailBtn.textContent = showTrail ? "Hide Trail" : "Show Trail";
+        toggleArmsBtn.textContent = showArms ? "Hide Arms" : "Show Arms";
+        togglePauseArmsBtn.textContent = hideArmsWhenPaused
+          ? "Show Arms When Paused"
+          : "Hide Arms When Paused";
+        togglePixelModeBtn.textContent = "Pixel Mode: Off";
+
+        updateSpeed();
+        updateInnerLength();
+        updateOuterLength();
+        updateTrailLength();
+        updateArmDrawSkipFrames();
+        updateLineWidth();
+
+        resetAnimation();
+      }
+
+      function setRandomSettings() {
+        speedSlider.value =
+          Math.floor(
+            Math.random() *
+              (parseInt(speedSlider.max, 10) -
+                parseInt(speedSlider.min, 10) +
+                1),
+          ) + parseInt(speedSlider.min, 10);
+        innerLengthSlider.value =
+          Math.floor(
+            Math.random() *
+              (parseInt(innerLengthSlider.max, 10) -
+                parseInt(innerLengthSlider.min, 10) +
+                1),
+          ) + parseInt(innerLengthSlider.min, 10);
+        outerLengthSlider.value =
+          Math.floor(
+            Math.random() *
+              (parseInt(outerLengthSlider.max, 10) -
+                parseInt(outerLengthSlider.min, 10) +
+                1),
+          ) + parseInt(outerLengthSlider.min, 10);
+        trailSlider.value =
+          Math.floor(
+            Math.random() *
+              (parseInt(trailSlider.max, 10) -
+                parseInt(trailSlider.min, 10) +
+                1),
+          ) + parseInt(trailSlider.min, 10);
+        armDrawSkipSlider.value =
+          Math.floor(
+            Math.random() *
+              (parseInt(armDrawSkipSlider.max, 10) -
+                parseInt(armDrawSkipSlider.min, 10) +
+                1),
+          ) + parseInt(armDrawSkipSlider.min, 10);
+        lineWidthSlider.value =
+          (Math.floor(
+            Math.random() *
+              (parseFloat(lineWidthSlider.max) * 10 -
+                parseFloat(lineWidthSlider.min) * 10 +
+                1),
+          ) +
+            parseFloat(lineWidthSlider.min) * 10) /
+          10;
+
+        updateSpeed();
+        updateInnerLength();
+        updateOuterLength();
+        updateTrailLength();
+        updateArmDrawSkipFrames();
+        updateLineWidth();
+
+        resetAnimation();
+      }
+
+      function downloadCanvasAsImage() {
+        if (!isPlaying) {
+          drawBackground();
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
+          const innerThetaVal = theta;
+          const innerEndXVal =
+            centerX + innerArmLength * Math.cos(innerThetaVal);
+          const innerEndYVal =
+            centerY + innerArmLength * Math.sin(innerThetaVal);
+          const outerArmAngleVal = Math.PI * innerThetaVal;
+          const outerEndXVal =
+            innerEndXVal + outerArmLength * Math.cos(outerArmAngleVal);
+          const outerEndYVal =
+            innerEndYVal + outerArmLength * Math.sin(outerArmAngleVal);
+
+          drawTrailOptimized();
+          if (showArms && (!hideArmsWhenPaused || isPlaying)) {
+            drawArms(
+              centerX,
+              centerY,
+              innerEndXVal,
+              innerEndYVal,
+              outerEndXVal,
+              outerEndYVal,
+            );
+          }
+        }
+
+        const dataURL = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataURL;
+        a.download = `pi_visualization_${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      function clearScreen() {
+        trail = new Array(maxTrailLength);
+        trailIndex = 0;
+
+        // clear pixel canvas if in pixel mode
+        if (pixelMode && trailCanvas) {
+          trailCtx.fillStyle = "#000";
+          trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+        }
+
+        drawBackground();
+        if (showArms) {
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
+          const innerEndX = centerX + innerArmLength * Math.cos(theta);
+          const innerEndY = centerY + innerArmLength * Math.sin(theta);
+          const outerEndX =
+            innerEndX + outerArmLength * Math.cos(Math.PI * theta);
+          const outerEndY =
+            innerEndY + outerArmLength * Math.sin(Math.PI * theta);
+          drawArms(
+            centerX,
+            centerY,
+            innerEndX,
+            innerEndY,
+            outerEndX,
+            outerEndY,
+          );
+        }
+      }
+
+      function openCreditLink() {
+        window.open("https://www.youtube.com/shorts/aUDYWYqtAR4", "_blank");
+      }
+
+      function openCodeLink() {
+        window.open("https://github.com/MehmetMHY/transcendental", "_blank");
+      }
+
+      // drawing functions
+      function drawBackground() {
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      function drawArms(
+        centerX,
+        centerY,
+        innerEndX,
+        innerEndY,
+        outerEndX,
+        outerEndY,
+      ) {
+        ctx.strokeStyle = "rgba(220, 220, 220, 0.7)";
+        ctx.fillStyle = "#fff";
+        ctx.lineWidth = currentLineWidth;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(innerEndX, innerEndY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(innerEndX, innerEndY, 4, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(innerEndX, innerEndY);
+        ctx.lineTo(outerEndX, outerEndY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(outerEndX, outerEndY, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+      }
+
+      function drawTrailOptimized() {
+        // when in pixel mode, use the pixel-based trail drawing
+        if (pixelMode) {
+          drawPixelTrail();
+          return;
+        }
+
+        if (!showTrail || trail.length === 0) return;
+
+        let firstValidPointIndex = -1;
+        for (let i = 0; i < maxTrailLength; i++) {
+          const currentBufferIndex = (trailIndex + i) % maxTrailLength;
+          if (trail[currentBufferIndex]) {
+            firstValidPointIndex = currentBufferIndex;
+            break;
+          }
+        }
+
+        if (firstValidPointIndex === -1) return;
+
+        ctx.beginPath();
+        ctx.moveTo(
+          trail[firstValidPointIndex].x,
+          trail[firstValidPointIndex].y,
+        );
+
+        let lastX = trail[firstValidPointIndex].x;
+        let lastY = trail[firstValidPointIndex].y;
+
+        for (let i = 1; i < maxTrailLength; i++) {
+          const currentPointBufferIndex =
+            (firstValidPointIndex + i) % maxTrailLength;
+          const currentPoint = trail[currentPointBufferIndex];
+
+          if (currentPoint) {
+            const dx = currentPoint.x - lastX;
+            const dy = currentPoint.y - lastY;
+            if (dx * dx + dy * dy > 1) {
+              ctx.lineTo(currentPoint.x, currentPoint.y);
+              lastX = currentPoint.x;
+              lastY = currentPoint.y;
+            }
+          } else {
+            break;
+          }
+        }
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.lineWidth = currentLineWidth;
+        ctx.stroke();
+      }
+
+      // pixel-based trail functions
+      function updateTrailPixel(x, y) {
+        if (!showTrail || !trailCtx) return;
+
+        x = Math.round(x);
+        y = Math.round(y);
+
+        if (x < 0 || x >= trailCanvas.width || y < 0 || y >= trailCanvas.height)
+          return;
+
+        const pixelData = trailCtx.getImageData(x, y, 1, 1).data;
+        const isBlack =
+          pixelData[0] === 0 && pixelData[1] === 0 && pixelData[2] === 0;
+
+        if (isBlack) {
+          trailCtx.fillStyle = "#fff";
+          trailCtx.fillRect(x, y, 1, 1);
+        }
+      }
+
+      function drawPixelTrail() {
+        if (!showTrail || !trailCanvas) return;
+        ctx.drawImage(trailCanvas, 0, 0);
+      }
+
+      // animation loop
+      function animate() {
+        if (!isPlaying) return;
+
+        animationId = requestAnimationFrame(animate);
+
+        // clear canvas
+        drawBackground();
+
+        // calculate positions
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // inner arm end position
+        const innerTheta = theta;
+        const innerEndX = centerX + innerArmLength * Math.cos(innerTheta);
+        const innerEndY = centerY + innerArmLength * Math.sin(innerTheta);
+
+        // outer arm end position, rotates PI times faster
+        const outerTheta = Math.PI * theta;
+        const outerEndX = innerEndX + outerArmLength * Math.cos(outerTheta);
+        const outerEndY = innerEndY + outerArmLength * Math.sin(outerTheta);
+
+        if (pixelMode) {
+          // update trail pixel
+          updateTrailPixel(outerEndX, outerEndY);
+        } else {
+          // add point to trail
+          if (
+            animationFrameCounter % (trailSkipFrames + 1) === 0 &&
+            maxTrailLength > 0
+          ) {
+            trail[trailIndex] = { x: outerEndX, y: outerEndY };
+            trailIndex = (trailIndex + 1) % maxTrailLength;
+          }
+        }
+
+        // draw elements
+        drawTrailOptimized();
+
+        if (showArms && animationFrameCounter % (armDrawSkipFrames + 1) === 0) {
+          drawArms(
+            centerX,
+            centerY,
+            innerEndX,
+            innerEndY,
+            outerEndX,
+            outerEndY,
+          );
+        }
+
+        animationFrameCounter++;
+        theta += speed;
+      }
+
+      function reset() {
+        theta = 0;
+        trail = new Array(maxTrailLength);
+        trailIndex = 0;
+
+        // clear pixel canvas if using pixel mode
+        if (pixelMode && trailCanvas) {
+          trailCtx.fillStyle = "#000";
+          trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+        }
+
+        if (!isPlaying) {
+          isPlaying = true;
+          playPauseBtn.textContent = "Pause";
+          animate();
+        }
+      }
+
+      // initialize the app
+      function init() {
+        speedSlider.value = DEFAULT_SETTINGS.speed;
+        innerLengthSlider.value = DEFAULT_SETTINGS.innerArmLength;
+        outerLengthSlider.value = DEFAULT_SETTINGS.outerArmLength;
+        trailSlider.value = DEFAULT_SETTINGS.trailLength;
+        armDrawSkipSlider.value = DEFAULT_SETTINGS.armDrawSkipFrames;
+        lineWidthSlider.value = DEFAULT_SETTINGS.lineWidth;
+
+        showTrail = DEFAULT_SETTINGS.showTrail;
+        toggleTrailBtn.textContent = showTrail ? "Hide Trail" : "Show Trail";
+        showArms = DEFAULT_SETTINGS.showArms;
+        toggleArmsBtn.textContent = showArms ? "Hide Arms" : "Show Arms";
+        hideArmsWhenPaused = DEFAULT_SETTINGS.hideArmsWhenPaused;
+        togglePauseArmsBtn.textContent = hideArmsWhenPaused
+          ? "Show Arms When Paused"
+          : "Hide Arms When Paused";
+
+        updateSpeed();
+        updateInnerLength();
+        updateOuterLength();
+        updateTrailLength();
+        updateArmDrawSkipFrames();
+        updateLineWidth();
+
+        setupCanvas();
+        trail = new Array(maxTrailLength);
+        setupEventListeners();
+        animate();
+      }
+
+      // start the app
+      init();
+
+      function loadSettingsFromFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const settings = JSON.parse(e.target.result);
+
+            // apply loaded settings to the UI and visualization
+            if (settings.speed !== undefined) {
+              speedSlider.value = settings.speed;
+              speedInput.value = settings.speed;
+              updateSpeed();
+            }
+
+            if (settings.innerArmLength !== undefined) {
+              innerLengthSlider.value = settings.innerArmLength;
+              innerLengthInput.value = settings.innerArmLength;
+              updateInnerLength();
+            }
+
+            if (settings.outerArmLength !== undefined) {
+              outerLengthSlider.value = settings.outerArmLength;
+              outerLengthInput.value = settings.outerArmLength;
+              updateOuterLength();
+            }
+
+            if (settings.trailLength !== undefined) {
+              trailSlider.value = settings.trailLength;
+              trailInput.value = settings.trailLength;
+              updateTrailLength();
+            }
+
+            if (settings.armDrawSkipFrames !== undefined) {
+              armDrawSkipSlider.value = settings.armDrawSkipFrames;
+              armDrawSkipInput.value = settings.armDrawSkipFrames;
+              updateArmDrawSkipFrames();
+            }
+
+            if (settings.lineWidth !== undefined) {
+              lineWidthSlider.value = settings.lineWidth;
+              lineWidthInput.value = settings.lineWidth;
+              updateLineWidth();
+            }
+
+            if (settings.showTrail !== undefined) {
+              showTrail = settings.showTrail;
+              toggleTrailBtn.textContent = showTrail
+                ? "Hide Trail"
+                : "Show Trail";
+            }
+
+            if (settings.showArms !== undefined) {
+              showArms = settings.showArms;
+              toggleArmsBtn.textContent = showArms ? "Hide Arms" : "Show Arms";
+            }
+
+            if (settings.hideArmsWhenPaused !== undefined) {
+              hideArmsWhenPaused = settings.hideArmsWhenPaused;
+              togglePauseArmsBtn.textContent = hideArmsWhenPaused
+                ? "Show Arms When Paused"
+                : "Hide Arms When Paused";
+            }
+
+            if (settings.pixelMode !== undefined) {
+              // only change mode if needed
+              if (pixelMode !== settings.pixelMode) {
+                togglePixelMode();
+              }
+            }
+
+            // reset the visualization with new settings
+            reset();
+
+            console.log("Settings loaded successfully:", settings);
+          } catch (error) {
+            console.error("Error loading settings:", error);
+            alert(
+              "Error loading settings. Please check that the file is a valid Pi Visualization settings JSON.",
+            );
+          }
+
+          // clear the file input so the same file can be selected again
+          settingsFileInput.value = "";
+        };
+
+        reader.readAsText(file);
+      }
+
+      // helper function to validate number input
+      function validateNumberInput(input, isFloat = false) {
+        const min = parseFloat(input.dataset.min);
+        const max = parseFloat(input.dataset.max);
+        let value;
+
+        if (isFloat) {
+          value = parseFloat(input.value);
+          if (isNaN(value)) {
+            value = parseFloat(input.defaultValue);
+          }
+        } else {
+          value = parseInt(input.value, 10);
+          if (isNaN(value)) {
+            value = parseInt(input.defaultValue, 10);
+          }
+        }
+
+        // ensure value is within bounds
+        if (value < min) value = min;
+        if (value > max) value = max;
+
+        return value;
+      }
+    </script>
+  </body>
+</html>

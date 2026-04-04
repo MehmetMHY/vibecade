@@ -1,0 +1,950 @@
+<!doctype html>
+<!--
+Stairs - A minimalist climbing game
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stairs</title>
+    <link rel="icon" type="image/png" href="./icon.png" />
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
+      #game-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(to bottom, #2c1e4a, #5c4a99);
+      }
+      #counter {
+        position: absolute;
+        top: 75px;
+        left: 0;
+        right: 0;
+        color: #fff;
+        font-size: 100px;
+        z-index: 100;
+        text-shadow: 0 0 5px #000;
+        text-align: center;
+        opacity: 0;
+        transition:
+          opacity 1s,
+          text-shadow 0.3s ease-out;
+      }
+      .counter-glow {
+        text-shadow:
+          0 0 25px #ffc107,
+          0 0 10px #fff; /* Glowing effect */
+      }
+      #milestone {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 48px;
+        opacity: 0;
+        transition: opacity 1s;
+        text-shadow: 0 0 10px #ffc107;
+        z-index: 100;
+      }
+      .instructions {
+        position: absolute;
+        bottom: 20px;
+        left: 20px; /* Positioned to the left */
+        color: #fff;
+        font-size: 16px;
+        z-index: 100;
+        text-shadow: 0 0 5px #000;
+        text-align: left; /* Aligned to the left */
+        transition: opacity 1s;
+      }
+      #game-title {
+        position: absolute;
+        top: 100px;
+        left: 0;
+        right: 0;
+        color: #fff;
+        font-size: clamp(
+          64px,
+          22.4vw,
+          320px
+        ); /* Adjusted clamp for larger size */
+        font-weight: bold;
+        z-index: 100;
+        text-shadow: 0 0 15px #8a2be2;
+        text-align: center;
+        letter-spacing: 8px;
+        transition: opacity 0s;
+      }
+      #game-over {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #e74c3c;
+        font-size: 80px;
+        font-weight: bold;
+        text-shadow: 0 0 15px #c0392b;
+        z-index: 100;
+        text-align: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s;
+      }
+      #restart-message {
+        position: absolute;
+        top: 60%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 24px;
+        text-shadow: 0 0 5px #000;
+        z-index: 100;
+        text-align: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s;
+      }
+      #ending-text {
+        position: absolute;
+        top: 25%; /* Slightly higher to avoid intersection */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 28px; /* Slightly larger */
+        text-shadow: 0 0 8px #000; /* Enhance shadow slightly */
+        z-index: 100;
+        text-align: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 1s; /* Adjust fade-in */
+        width: 80%; /* Ensure text wraps if needed */
+        line-height: 1.5; /* Spacing between lines */
+      }
+      #header-controls {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 110; /* Ensure it's above other elements */
+        display: flex;
+        gap: 10px;
+      }
+      .control-button {
+        padding: 8px 15px;
+        font-size: 14px;
+        color: #fff;
+        background-color: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none; /* For the link button */
+        transition:
+          background-color 0.2s,
+          border-color 0.2s;
+      }
+      .control-button:hover {
+        background-color: rgba(0, 0, 0, 0.6);
+        border-color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="header-controls">
+        <button id="mute-button" class="control-button">Mute</button>
+        <button id="restart-button" class="control-button">Restart</button>
+        <a
+          href="https://github.com/MehmetMHY/stairs"
+          target="_blank"
+          id="code-button"
+          class="control-button"
+          >Code</a
+        >
+      </div>
+      <div id="game-title">STAIRS</div>
+      <div id="counter">0</div>
+      <div id="milestone"></div>
+      <div id="instructions" class="instructions">
+        Hit up arrow, w key, or tap the screen to climb!
+      </div>
+      <div id="game-over">GAME OVER</div>
+      <div id="restart-message">Press UP/W or Tap to restart</div>
+      <div id="ending-text"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      /*
+       * GAME CONSTANTS & STATE
+       * ----------------------
+       * We keep geometry coordinates small (0..~20) while the displayed
+       * step counter starts at 999,985.  `currentStep` is the *local* step
+       * the player is really standing on (0, 1, 2 … 15) and
+       * `START_DISPLAY_STEP + currentStep` is what we show in the UI.
+       */
+      const START_DISPLAY_STEP = 0; // what the counter starts at
+      const FINAL_STEP = 15_000; // the target step number
+      let currentStep = 0; // local step index used for geometry & physics
+
+      // three.js objects & misc state
+      let camera, scene, renderer;
+      let player,
+        stairs = [];
+      let isMoving = false,
+        isFalling = false,
+        isGameOver = false,
+        isEnding = false;
+      let animationId = null,
+        fallSpeed = 0;
+      let lastStairWasMoving = false;
+      let floatingObjects = [];
+      let sun, playerLight;
+      let hasStartedMoving = false;
+      let backgroundMusic = null,
+        endingMusic = null,
+        musicPlaying = false;
+      let canRestartAfterEnding = false;
+
+      /* -----------------------------------------------------------*/
+      //                       INPUT HANDLERS
+      /* -----------------------------------------------------------*/
+      function onKeyDown(event) {
+        if (isEnding) {
+          if (canRestartAfterEnding) window.location.reload();
+          return;
+        }
+        if (isGameOver) {
+          if (event.key === "ArrowUp" || event.key.toLowerCase() === "w")
+            window.location.reload();
+          return;
+        }
+        if (isMoving || isFalling) return;
+        if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") {
+          if (!hasStartedMoving) startGame();
+          moveUp();
+        }
+      }
+
+      function onTouchStart(event) {
+        const target = event.target;
+        if (
+          target.classList.contains("control-button") ||
+          target.closest("#header-controls")
+        )
+          return; // let controls work
+        event.preventDefault();
+
+        if (isEnding) {
+          if (canRestartAfterEnding) window.location.reload();
+          return;
+        }
+        if (isGameOver) {
+          window.location.reload();
+          return;
+        }
+        if (isMoving || isFalling) return;
+        if (!hasStartedMoving) startGame();
+        moveUp();
+      }
+
+      /* -----------------------------------------------------------*/
+      //                      GAME INITIALISATION
+      /* -----------------------------------------------------------*/
+      function init() {
+        resetState();
+        setupScene();
+        createInitialStairs();
+        for (let i = 0; i < 100; i++) createFloatingObject();
+        initMusic();
+        animate();
+      }
+
+      function resetState() {
+        // cancel previous RAF if any
+        if (animationId !== null) cancelAnimationFrame(animationId);
+
+        stairs = [];
+        floatingObjects = [];
+        lastStairWasMoving = false;
+        isMoving = isFalling = isGameOver = isEnding = false;
+        fallSpeed = 0;
+        currentStep = 0;
+        hasStartedMoving = false;
+        canRestartAfterEnding = false;
+
+        // reset UI
+        document.getElementById("counter").textContent =
+          START_DISPLAY_STEP.toString();
+        document.getElementById("counter").style.opacity = 0;
+        document.getElementById("counter").classList.remove("counter-glow");
+        document.getElementById("game-title").style.display = "block";
+        document.getElementById("instructions").style.opacity = 1;
+        document.getElementById("game-over").style.opacity = 0;
+        document.getElementById("restart-message").style.opacity = 0;
+        document.getElementById("ending-text").style.opacity = 0;
+      }
+
+      function setupScene() {
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0xffb380, 0.03);
+
+        camera = new THREE.PerspectiveCamera(
+          75,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000,
+        );
+        camera.position.set(0, 1, 3);
+        camera.lookAt(0, 2, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000);
+        const container = document.getElementById("game-container");
+        const oldCanvas = container.querySelector("canvas");
+        if (oldCanvas) container.removeChild(oldCanvas);
+        container.appendChild(renderer.domElement);
+
+        const ambient = new THREE.AmbientLight(0x404040, 0.6);
+        scene.add(ambient);
+        sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(5, 10, 7);
+        scene.add(sun);
+
+        playerLight = new THREE.PointLight(0xffffff, 1.5, 8);
+        scene.add(playerLight);
+
+        const sunSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(2, 32, 32),
+          new THREE.MeshBasicMaterial({ color: 0xffee88 }),
+        );
+        sunSphere.position.set(15, 15, -20);
+        scene.add(sunSphere);
+
+        // player
+        const playerGeom = new THREE.SphereGeometry(0.3, 32, 32);
+        const playerMat = new THREE.MeshPhongMaterial({
+          color: 0x1a75ff,
+          shininess: 100,
+          specular: 0xffffff,
+        });
+        player = new THREE.Mesh(playerGeom, playerMat);
+        player.position.set(0, 0.4, 0);
+        scene.add(player);
+
+        // ground (purely decorative)
+        const ground = new THREE.Mesh(
+          new THREE.PlaneGeometry(100, 100),
+          new THREE.MeshLambertMaterial({ color: 0x553311 }),
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.5;
+        scene.add(ground);
+
+        window.addEventListener("resize", onWindowResize);
+        document.addEventListener("keydown", onKeyDown);
+        document
+          .getElementById("game-container")
+          .addEventListener("touchstart", onTouchStart);
+        document
+          .getElementById("restart-button")
+          .addEventListener("click", () => window.location.reload());
+      }
+
+      function initMusic() {
+        try {
+          backgroundMusic = new Audio("./music.mp3");
+          backgroundMusic.loop = true;
+          backgroundMusic
+            .play()
+            .then(() => (musicPlaying = true))
+            .catch(() => (musicPlaying = false));
+        } catch {
+          backgroundMusic = null;
+        }
+        const muteBtn = document.getElementById("mute-button");
+        muteBtn.addEventListener("click", () => {
+          if (!backgroundMusic) return;
+          backgroundMusic.muted = !backgroundMusic.muted;
+          muteBtn.textContent = backgroundMusic.muted ? "Unmute" : "Mute";
+          localStorage.setItem(
+            "isMuted",
+            backgroundMusic.muted ? "true" : "false",
+          );
+        });
+        if (localStorage.getItem("isMuted") === "true" && backgroundMusic) {
+          backgroundMusic.muted = true;
+          document.getElementById("mute-button").textContent = "Unmute";
+        }
+      }
+
+      function startGame() {
+        hasStartedMoving = true;
+        document.getElementById("game-title").style.display = "none";
+        document.getElementById("instructions").style.opacity = 0;
+        document.getElementById("counter").style.opacity = 1;
+        if (backgroundMusic && !musicPlaying) {
+          backgroundMusic.play().catch(() => {});
+          musicPlaying = true;
+        }
+      }
+
+      /* -----------------------------------------------------------*/
+      //                         STAIRS
+      /* -----------------------------------------------------------*/
+      function createInitialStairs() {
+        for (let i = -5; i <= 9; i++) createStair(i);
+      }
+
+      function createStair(index) {
+        const totalIndex = START_DISPLAY_STEP + index; // the real step number displayed to the user
+        const isMilestone = totalIndex > 0 && totalIndex % 500 === 0;
+
+        // moving stair rules (unchanged, but based on totalIndex for randomness consistency)
+        let potentialMoving =
+          index > 5 &&
+          totalIndex < FINAL_STEP - 10 && // Stop moving stairs near the end
+          Math.random() < 0.3 &&
+          !isMilestone;
+        if (potentialMoving && lastStairWasMoving) potentialMoving = false;
+        const isMovingStair = potentialMoving;
+        const stairWidth = isMovingStair ? 2 : 1;
+
+        const stair = new THREE.Mesh(
+          new THREE.BoxGeometry(stairWidth, 0.15, 0.5),
+          new THREE.MeshLambertMaterial({
+            color: isMilestone ? 0xffd700 : 0xcccccc,
+          }),
+        );
+
+        stair.position.set(0, index * 0.2, -index * 0.5);
+
+        if (totalIndex === FINAL_STEP) stair.userData.isFinalStep = true;
+        if (isMilestone) {
+          stair.userData.isMilestone = true;
+          stair.userData.milestoneNumber = totalIndex;
+        }
+        if (isMovingStair) {
+          stair.userData.isMoving = true;
+          stair.userData.moveSpeed =
+            (Math.random() * 0.5 + 0.75) * (Math.random() < 0.5 ? 1 : -1);
+          stair.userData.moveRange = Math.random() * 2.0 + 1.5;
+          stair.userData.originalX = stair.position.x;
+          stair.userData.timeOffset = Math.random() * Math.PI * 2;
+        }
+        lastStairWasMoving = isMovingStair;
+        scene.add(stair);
+        stairs.push(stair);
+        if (stairs.length > 30) {
+          const oldest = stairs[0];
+          if (!oldest.userData.isFinalStep) {
+            stairs.shift();
+            scene.remove(oldest);
+            oldest.geometry.dispose();
+            oldest.material.dispose();
+          }
+        }
+      }
+
+      /* -----------------------------------------------------------*/
+      //                     MOVEMENT & PHYSICS
+      /* -----------------------------------------------------------*/
+      function moveUp() {
+        if (isMoving || isFalling || isGameOver || isEnding) return;
+
+        // prepare numbers
+        const displayBefore = START_DISPLAY_STEP + currentStep;
+        const isNearEnd = displayBefore >= FINAL_STEP - 10;
+
+        isMoving = true;
+        currentStep++;
+        const displayNow = START_DISPLAY_STEP + currentStep;
+        document.getElementById("counter").textContent = displayNow.toString();
+
+        // ENDING CHECK
+        if (displayNow === FINAL_STEP) {
+          triggerEndingSequence();
+          return;
+        }
+
+        // effects every 100 steps in display counter
+        if (displayNow % 100 === 0) {
+          player.material.color.setHex(getRandomColor());
+          const c = document.getElementById("counter");
+          c.classList.add("counter-glow");
+          setTimeout(() => c.classList.remove("counter-glow"), 1500);
+        }
+
+        createStair(currentStep + 9);
+        for (let i = 0; i < 5; i++) createFloatingObject();
+
+        // next stair collision & moving stair check
+        const nextStair = stairs.find(
+          (s) => Math.abs(s.position.y - currentStep * 0.2) < 0.01,
+        );
+        if (nextStair && nextStair.userData.isMoving && !isNearEnd) {
+          const distX = Math.abs(player.position.x - nextStair.position.x);
+          if (distX > nextStair.geometry.parameters.width / 2) {
+            player.position.y = currentStep * 0.2 + 0.4;
+            startFalling();
+            isMoving = false;
+            return;
+          }
+        }
+        if (isNearEnd) player.position.x = nextStair ? nextStair.position.x : 0;
+
+        // smooth step animation
+        const startY = player.position.y,
+          startZ = player.position.z;
+        const targetY = startY + 0.2,
+          targetZ = startZ - 0.5;
+        const camStartY = camera.position.y,
+          camStartZ = camera.position.z;
+        const startTime = performance.now(),
+          duration = 200;
+        function stepAnim() {
+          const progress = Math.min(
+            (performance.now() - startTime) / duration,
+            1,
+          );
+          player.position.y = startY + (targetY - startY) * progress;
+          player.position.z = startZ + (targetZ - startZ) * progress;
+          camera.position.y = camStartY + 0.2 * progress;
+          camera.position.z = camStartZ - 0.5 * progress;
+          camera.lookAt(
+            player.position.x,
+            player.position.y + 0.5,
+            player.position.z - 2,
+          );
+          updatePlayerLight();
+          if (progress < 1) requestAnimationFrame(stepAnim);
+          else isMoving = false;
+        }
+        requestAnimationFrame(stepAnim);
+      }
+
+      function checkPlayerSupport() {
+        if (isMoving || isGameOver || isFalling) return;
+        const expectedY = player.position.y - 0.4;
+        const supported = stairs.some(
+          (stair) =>
+            Math.abs(stair.position.y - expectedY) < 0.05 &&
+            Math.abs(player.position.x - stair.position.x) <=
+              stair.geometry.parameters.width / 2,
+        );
+        if (!supported) startFalling();
+      }
+
+      function startFalling() {
+        if (isFalling || isGameOver) return;
+        isFalling = true;
+        fallSpeed = 0;
+      }
+      function updateFalling() {
+        if (!isFalling) return;
+        fallSpeed += 0.01;
+        player.position.y -= fallSpeed;
+        camera.position.y -= fallSpeed;
+        camera.lookAt(
+          player.position.x,
+          player.position.y + 0.5,
+          player.position.z - 2,
+        );
+        updatePlayerLight();
+        if (player.position.y < currentStep * 0.2 + 0.4 - 3) gameOver();
+      }
+
+      /* -----------------------------------------------------------*/
+      //                       VISUAL UPDATES
+      /* -----------------------------------------------------------*/
+      function updatePlayerLight() {
+        playerLight.position.set(
+          player.position.x,
+          player.position.y + 0.8,
+          player.position.z + 0.5,
+        );
+      }
+
+      function updateSkyColor() {
+        const total = START_DISPLAY_STEP + currentStep;
+        const cyclePeriod = 2000;
+        const heightRatio = (total % cyclePeriod) / cyclePeriod;
+        let sky;
+        if (heightRatio < 0.25)
+          sky = new THREE.Color().setHSL(0.7, 0.8, heightRatio * 2 * 0.3 + 0.1);
+        else if (heightRatio < 0.5)
+          sky = new THREE.Color().setHSL(
+            0.7 - (heightRatio - 0.25) * 4 * 0.6,
+            0.8,
+            0.2,
+          );
+        else if (heightRatio < 0.75)
+          sky = new THREE.Color().setHSL(
+            0.1 + (heightRatio - 0.5) * 4 * 0.4,
+            0.8,
+            0.2,
+          );
+        else
+          sky = new THREE.Color().setHSL(
+            0.5 + (heightRatio - 0.75) * 4 * 0.2,
+            0.8,
+            0.2,
+          );
+        scene.fog.color = sky;
+        renderer.setClearColor(sky);
+      }
+
+      /* -----------------------------------------------------------*/
+      //                     FLOATING OBJECTS & MOVING STAIRS (unchanged)
+      /* -----------------------------------------------------------*/
+      function createFloatingObject() {
+        const shapes = [
+          new THREE.SphereGeometry(Math.random() * 0.5 + 0.2, 8, 8),
+          new THREE.BoxGeometry(
+            Math.random() * 0.5 + 0.2,
+            Math.random() * 0.5 + 0.2,
+            Math.random() * 0.5 + 0.2,
+          ),
+          new THREE.TorusGeometry(
+            Math.random() * 0.3 + 0.1,
+            Math.random() * 0.1 + 0.05,
+            8,
+            16,
+          ),
+          new THREE.TetrahedronGeometry(Math.random() * 0.4 + 0.2),
+          new THREE.OctahedronGeometry(Math.random() * 0.4 + 0.1),
+        ];
+        const geometry = shapes[Math.floor(Math.random() * shapes.length)];
+        const colors = [
+          0xff5555, 0x55ff55, 0x5555ff, 0xffff55, 0xff55ff, 0x55ffff, 0xff8855,
+          0xff55aa, 0x88ff55, 0xaa5555, 0x55aa55, 0x5555aa, 0xaaaa55, 0xaa55aa,
+          0x55aaaa,
+        ];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const material =
+          Math.random() > 0.5
+            ? new THREE.MeshBasicMaterial({
+                color,
+                transparent: true,
+                opacity: 0.6 + Math.random() * 0.4,
+              })
+            : new THREE.MeshPhongMaterial({
+                color,
+                transparent: true,
+                opacity: 0.7 + Math.random() * 0.3,
+                shininess: 90,
+                emissive: color,
+                emissiveIntensity: 0.2,
+              });
+        const obj = new THREE.Mesh(geometry, material);
+        const radius = Math.random() * 12 + 3,
+          angle = Math.random() * Math.PI * 2,
+          heightOffset = Math.random() * 30 - 10;
+        // Adjusted position to use local currentStep + offset, and kept Z relative to 0 for simplicity
+        obj.position.set(
+          Math.sin(angle) * radius,
+          currentStep * 0.2 + heightOffset,
+          -Math.cos(angle) * radius,
+        ); // Adjusted Z calculation
+        obj.rotation.set(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+        );
+        obj.userData.rotSpeed = {
+          x: (Math.random() - 0.5) * 0.03,
+          y: (Math.random() - 0.5) * 0.03,
+          z: (Math.random() - 0.5) * 0.03,
+        };
+        obj.userData.moveSpeed = {
+          x: (Math.random() - 0.5) * 0.05,
+          y: (Math.random() - 0.5) * 0.02,
+          z: (Math.random() - 0.5) * 0.05,
+        };
+        obj.userData.pulseSpeed = Math.random() * 0.05 + 0.02;
+        obj.userData.pulseSize = Math.random() * 0.2 + 0.1;
+        obj.userData.originalScale = obj.scale.clone();
+        obj.userData.pulseOffset = Math.random() * Math.PI * 2;
+        scene.add(obj);
+        floatingObjects.push(obj);
+        if (floatingObjects.length > 300) {
+          const old = floatingObjects.shift();
+          scene.remove(old);
+          old.geometry.dispose();
+          old.material.dispose();
+        }
+      }
+      function updateFloatingObjects() {
+        const time = performance.now() * 0.001;
+        floatingObjects.forEach((o) => {
+          o.rotation.x += o.userData.rotSpeed.x;
+          o.rotation.y += o.userData.rotSpeed.y;
+          o.rotation.z += o.userData.rotSpeed.z;
+          o.position.x += o.userData.moveSpeed.x;
+          o.position.y += o.userData.moveSpeed.y;
+          o.position.z += o.userData.moveSpeed.z;
+          const pulse =
+            Math.sin(time * o.userData.pulseSpeed + o.userData.pulseOffset) *
+              o.userData.pulseSize +
+            1;
+          o.scale.set(
+            o.userData.originalScale.x * pulse,
+            o.userData.originalScale.y * pulse,
+            o.userData.originalScale.z * pulse,
+          );
+          // Simplified distance check based on Z, adjusted relative repositioning
+          const distZ = Math.abs(o.position.z - player.position.z);
+          if (distZ > 25) {
+            // Check mainly based on Z distance from player
+            // Simplified push back: move towards player Z
+            o.userData.moveSpeed.z +=
+              (player.position.z - o.position.z) * 0.0003;
+          }
+          if (
+            o.position.y < player.position.y - 15 ||
+            o.position.z > player.position.z + 15
+          ) {
+            const r = Math.random() * 12 + 3,
+              a = Math.random() * Math.PI * 2,
+              hOff = Math.random() * 20 - 5;
+            // Reposition relative to player's current geometry position
+            o.position.set(
+              player.position.x + Math.sin(a) * r,
+              player.position.y + hOff,
+              player.position.z - Math.cos(a) * r - 15,
+            );
+            o.userData.moveSpeed = {
+              x: (Math.random() - 0.5) * 0.05,
+              y: (Math.random() - 0.5) * 0.02,
+              z: (Math.random() - 0.5) * 0.05,
+            };
+          }
+        });
+      }
+
+      function updateMovingStairs() {
+        const time = performance.now() * 0.001;
+        stairs.forEach((s) => {
+          if (s.userData.isMoving) {
+            const offset =
+              Math.sin(
+                time * Math.abs(s.userData.moveSpeed) + s.userData.timeOffset,
+              ) * s.userData.moveRange;
+            s.position.x = s.userData.originalX + offset;
+          }
+        });
+      }
+
+      /* -----------------------------------------------------------*/
+      //                     GAME OVER / ENDING
+      /* -----------------------------------------------------------*/
+      function getRandomColor() {
+        const colors = [
+          0xff5555, 0x55ff55, 0x5555ff, 0xffff55, 0xff55ff, 0x55ffff, 0xff8855,
+          0xff55aa, 0x88ff55, 0xaa5555, 0x55aa55, 0x5555aa, 0xaaaa55, 0xaa55aa,
+          0x55aaaa,
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+      }
+      function gameOver() {
+        if (isGameOver || isEnding) return;
+        isGameOver = true;
+        isFalling = false;
+        document.getElementById("game-over").style.opacity = 1;
+        const msg = document.getElementById("restart-message");
+        msg.textContent = "Press UP/W or Tap to restart";
+        msg.style.opacity = 1;
+        player.material.color.setHex(0xff0000);
+      }
+
+      // -- triggerEndingSequence & showEndingText pasted below --
+      function triggerEndingSequence() {
+        if (isEnding) return;
+        isEnding = true;
+        isMoving = false;
+        isFalling = false;
+        isGameOver = false;
+
+        // Find the actual final step object based on userData
+        let finalStair = stairs.find(
+          (s) => s && s.userData.isFinalStep === true,
+        );
+
+        // Clear all *other* stairs (keep the final one)
+        [...stairs].forEach((stair) => {
+          if (stair && !stair.userData.isFinalStep) {
+            scene.remove(stair);
+            // Optional dispose if needed
+            // stair.geometry.dispose();
+            // stair.material.dispose();
+          }
+        });
+        stairs = finalStair ? [finalStair] : []; // Keep only the final stair in array
+
+        // If somehow finalStair wasn't found (shouldn't happen with new logic, but fallback)
+        if (!finalStair) {
+          console.warn(
+            "Final step object not found, ending might look abrupt.",
+          );
+          // Position player based on currentStep which *is* the final step's index
+          player.position.set(0, currentStep * 0.2 + 0.4, -currentStep * 0.5);
+        } else {
+          // Ensure player is precisely on the final step found
+          player.position.set(
+            finalStair.position.x,
+            finalStair.position.y + 0.4,
+            finalStair.position.z,
+          );
+        }
+
+        // Adjust camera to look at the player on the final step
+        camera.position.y = player.position.y + 0.6;
+        camera.position.z = player.position.z + 3;
+        camera.lookAt(
+          player.position.x,
+          player.position.y + 0.5,
+          player.position.z - 2,
+        );
+        updatePlayerLight();
+
+        document.getElementById("counter").style.opacity = 0;
+        document.getElementById("milestone").style.opacity = 0;
+        document.getElementById("game-over").style.opacity = 0;
+        document.getElementById("restart-message").style.opacity = 0;
+
+        if (backgroundMusic && musicPlaying) backgroundMusic.pause();
+
+        try {
+          endingMusic = new Audio("./end.mp3");
+          endingMusic.loop = false;
+          endingMusic
+            .play()
+            .catch((e) => console.error("Ending music error:", e));
+          const muteBtn = document.getElementById("mute-button");
+          if (muteBtn) {
+            muteBtn.onclick = () => {
+              // Replace listener
+              if (endingMusic) {
+                endingMusic.muted = !endingMusic.muted;
+                muteBtn.textContent = endingMusic.muted ? "Unmute" : "Mute";
+              }
+            };
+            if (backgroundMusic && backgroundMusic.muted) {
+              endingMusic.muted = true;
+              muteBtn.textContent = "Unmute";
+            }
+          }
+        } catch (error) {
+          console.error("Ending music init error:", error);
+          endingMusic = null;
+        }
+
+        // Fall animation (unchanged)
+        const fallStartTime = performance.now();
+        const fallDuration = 3000,
+          fallDistance = 80;
+        const startY = player.position.y,
+          startCamY = camera.position.y;
+        const targetY = startY - fallDistance,
+          targetCamY = startCamY - fallDistance;
+        function fallAnimation() {
+          if (!isEnding) return;
+          const elapsed = performance.now() - fallStartTime;
+          const progress = Math.min(elapsed / fallDuration, 1);
+          const easedProgress = progress * progress;
+          player.position.y = startY + (targetY - startY) * easedProgress;
+          camera.position.y =
+            startCamY + (targetCamY - startCamY) * easedProgress;
+          camera.lookAt(
+            player.position.x,
+            player.position.y,
+            player.position.z,
+          );
+          updatePlayerLight();
+          const black = new THREE.Color(0x000000);
+          scene.fog.color.lerp(black, easedProgress * 0.1);
+          renderer.setClearColor(scene.fog.color);
+          if (progress < 1) requestAnimationFrame(fallAnimation);
+          else showEndingText();
+        }
+        requestAnimationFrame(fallAnimation);
+      }
+
+      function showEndingText() {
+        const endingTextDiv = document.getElementById("ending-text");
+        endingTextDiv.innerHTML = "";
+        endingTextDiv.style.opacity = 1;
+        const fullText =
+          "So, you made it… or have you? The world still waits, teeth bared, and life slithers on, dragging you back into its gnawing grasp. This was no true escape, only a thin veil torn away, making the lurking horrors pulse sharper in the gloom. You have squandered precious hours, and now your suffering festers. Deeper, hungrier, impossible to outrun. What will you do now child?";
+        const charDelay = 160;
+        let charIndex = 0;
+        function typeCharacter() {
+          if (charIndex < fullText.length) {
+            endingTextDiv.innerHTML += fullText[charIndex];
+            charIndex++;
+            setTimeout(typeCharacter, charDelay);
+          } else {
+            canRestartAfterEnding = true;
+          }
+        }
+        setTimeout(typeCharacter, 500);
+      }
+
+      /* -----------------------------------------------------------*/
+      //                             MAIN LOOP
+      /* -----------------------------------------------------------*/
+      function animate() {
+        // Anti-cheat: Force ending if step count is artificially inflated
+        if (START_DISPLAY_STEP + currentStep >= FINAL_STEP && !isEnding) {
+          triggerEndingSequence();
+          // No need to continue the rest of the loop for this frame
+          // Render once more to reflect immediate state change if needed
+          renderer.render(scene, camera);
+          return;
+        }
+
+        animationId = requestAnimationFrame(animate);
+        sun.position.x = 15 * Math.cos(performance.now() * 0.0001);
+        sun.position.z = 15 * Math.sin(performance.now() * 0.0001);
+        if (!isEnding) {
+          updateMovingStairs();
+          checkPlayerSupport();
+          updateFalling();
+          updatePlayerLight();
+          updateFloatingObjects();
+          updateSkyColor();
+          // Removed player pulse effect for consistency with prior state if unintended
+          // player.scale.setScalar(1 + Math.sin(performance.now() * 0.003) * 0.03);
+        }
+        renderer.render(scene, camera);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // kick things off
+      init();
+    </script>
+  </body>
+</html>
