@@ -1,27 +1,45 @@
+# dependencies
+/node_modules
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
+# yarn
+.yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-.DS_Store
-.env*
 .pnp.*
-.pnpm-debug.log*
-.vercel
-.yarn/*
-*.pem
-*.tsbuildinfo
-/.next/
 /.pnp
+
+# build output
+/.next/
 /build
-/coverage
-/node_modules
 /out/
-code_dump_*.txt
-env/
-export_*
+/coverage
+*.tsbuildinfo
 next-env.d.ts
-npm-debug.log*
+
+# python
+env/
 venv/
-yarn-debug.log*
-yarn-error.log*
+
+# environment & secrets
+.env*
+*.pem
+
+# deployment
+.vercel
+
+# os
+.DS_Store
+
+# claude
+.claude/
+
+# project specific
+code_dump_*.txt
+export_*
+ch_*
