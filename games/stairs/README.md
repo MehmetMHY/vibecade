@@ -8,7 +8,7 @@
 
 ## How To Run
 
-The game is hosted [HERE](https://mehmetmhy.github.io/stairs/) through GitHub. But if you want to run it locally, download this code and navigate to it. Then just open the `index.html` file in your browser and start playing!
+The game is hosted [HERE](https://mehmetmhy.github.io/games/games/stairs/index.html) through GitHub. But if you want to run it locally, download this code and navigate to it. Then just open the `index.html` file in your browser and start playing!
 
 ## Credits
 

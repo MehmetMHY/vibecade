@@ -2,7 +2,7 @@
 
 ## About
 
-A small collection of web games and visual experiments built with [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding).
+A small collection of web games and visual experiments built with the practice [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding).
 
 ## Run
 
