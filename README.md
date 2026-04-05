@@ -14,11 +14,11 @@ python3 -m http.server
 
 ## Structure
 
-`index.html` is the landing page, `assets/` holds shared assets, and `games/` contains each game in its own directory, with `games/third-party/` reserved for external games (each entry is a folder with a thumbnail and a `game.json`).
+`index.html` is the landing page, `assets/` holds shared assets, and `content/` contains each game in its own directory, with `content/third-party/` reserved for external games (each entry is a folder with a thumbnail and a `game.json`).
 
 ## Adding a third-party game
 
-Create `games/third-party/<slug>/` containing a thumbnail and `game.json`:
+Create `content/third-party/<slug>/` containing a thumbnail and `game.json`:
 
 ```json
 {

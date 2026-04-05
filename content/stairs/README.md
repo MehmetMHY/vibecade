@@ -6,10 +6,6 @@
 
 **Stairs** is a game where you walk up stairs, step by step, until you give up...
 
-## How To Run
-
-The game is hosted [HERE](https://mehmetmhy.github.io/games/games/stairs/index.html) through GitHub. But if you want to run it locally, download this code and navigate to it. Then just open the `index.html` file in your browser and start playing!
-
 ## Credits
 
 This game was inspired by the video, [Games that Don't Fake the Space](https://www.youtube.com/watch?v=Q85l1Fenc5w).
