@@ -2,5 +2,6 @@
   "title": "Perfect Tetris",
   "description": "A fast, minimal, ad-free browser Tetris tuned for both desktop and mobile.",
   "url": "https://mehmetmhy.github.io/tetris/",
-  "thumbnail": "logo.png"
+  "thumbnail": "logo.png",
+  "license": "https://opensource.org/license/mit"
 }

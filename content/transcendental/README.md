@@ -57,4 +57,4 @@ This is a project, created through [Vibe Coding](https://en.wikipedia.org/wiki/V
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0](./LICENSE). Major creative credit goes to **[@fascinating.fractals](https://www.youtube.com/shorts/aUDYWYqtAR4)** for the algorithmic inspiration.
+This project is licensed under the [GNU General Public License v3.0](../../LICENSE). Major creative credit goes to **[@fascinating.fractals](https://www.youtube.com/shorts/aUDYWYqtAR4)** for the algorithmic inspiration.

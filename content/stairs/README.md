@@ -26,4 +26,4 @@ Stairs was built using the methodology of [Vibe Coding](https://en.wikipedia.org
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0](./LICENSE).
+This project is licensed under the [GNU General Public License v3.0](../../LICENSE).
