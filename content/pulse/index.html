@@ -1,0 +1,1527 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="logo.png" />
+    <title>PULSE</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        background: #000;
+        font-family: "Courier New", monospace;
+        color: white;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      #game-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .hud {
+        position: absolute;
+        top: 24px;
+        left: 24px;
+        pointer-events: none;
+        text-shadow: 0 0 12px rgba(100, 200, 255, 0.8);
+        letter-spacing: 3px;
+      }
+      .score-label {
+        font-size: 11px;
+        color: #7fb;
+        opacity: 0.8;
+      }
+      .score {
+        font-size: 38px;
+        color: #9ee;
+        font-weight: bold;
+        line-height: 1;
+        margin-top: 2px;
+      }
+      .combo {
+        color: #ffd85a;
+        font-size: 16px;
+        margin-top: 8px;
+        text-shadow: 0 0 15px rgba(255, 216, 90, 0.8);
+        min-height: 20px;
+      }
+      .combo.shake {
+        animation: shake 0.25s ease-out;
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0) scale(1);
+        }
+        25% {
+          transform: translateX(-4px) scale(1.15);
+        }
+        75% {
+          transform: translateX(4px) scale(1.1);
+        }
+      }
+
+      .top-right {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        text-align: right;
+        pointer-events: none;
+      }
+      .lives {
+        font-size: 22px;
+        letter-spacing: 4px;
+        text-shadow: 0 0 12px rgba(255, 120, 210, 0.6);
+      }
+      .wave {
+        font-size: 11px;
+        letter-spacing: 3px;
+        color: #9ae;
+        opacity: 0.8;
+        margin-top: 8px;
+      }
+      .bpm {
+        font-size: 10px;
+        letter-spacing: 2px;
+        color: #7fb;
+        opacity: 0.6;
+        margin-top: 4px;
+      }
+
+      .legend {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 20px;
+        pointer-events: none;
+        font-size: 10px;
+        letter-spacing: 2px;
+        opacity: 0.75;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        box-shadow: 0 0 8px currentColor;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        pointer-events: auto;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(10, 14, 39, 0.4) 0%,
+          rgba(0, 0, 0, 0.75) 100%
+        );
+        padding: 20px;
+      }
+      .title {
+        font-size: clamp(64px, 14vw, 140px);
+        font-weight: bold;
+        background: linear-gradient(45deg, #64c8ff, #ff64c8, #ffd700, #6effaa);
+        background-size: 300% 300%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: gradientShift 4s ease infinite;
+        letter-spacing: clamp(6px, 2vw, 14px);
+        line-height: 1;
+      }
+      @keyframes gradientShift {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+      .tagline {
+        font-size: 13px;
+        color: #9ae;
+        margin-top: 28px;
+        letter-spacing: 3px;
+        max-width: 500px;
+        line-height: 2;
+      }
+      .instructions {
+        margin-top: 30px;
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 10px 24px;
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: #9ae;
+        text-align: left;
+        max-width: 600px;
+      }
+      .key {
+        color: #9ee;
+        font-weight: bold;
+      }
+      .btn {
+        margin-top: 40px;
+        padding: 18px 56px;
+        font-size: 18px;
+        background: transparent;
+        border: 2px solid #64c8ff;
+        color: #64c8ff;
+        cursor: pointer;
+        letter-spacing: 5px;
+        font-family: inherit;
+        font-weight: bold;
+        transition: all 0.3s;
+      }
+      .btn:hover {
+        background: #64c8ff;
+        color: #0a0e27;
+        box-shadow: 0 0 40px #64c8ff;
+        transform: scale(1.05);
+      }
+      .btn-hint {
+        margin-top: 18px;
+        font-size: 10px;
+        letter-spacing: 4px;
+        color: #666;
+      }
+
+      .final-score {
+        font-size: 56px;
+        color: #ffd700;
+        margin: 24px 0 4px;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+      }
+      .stats-row {
+        font-size: 13px;
+        color: #888;
+        letter-spacing: 3px;
+        margin: 6px 0;
+      }
+      .new-hs {
+        color: #ff64c8;
+        font-weight: bold;
+        animation: pulse 1s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      .mute-btn {
+        position: absolute;
+        bottom: 24px;
+        right: 24px;
+        padding: 9px 14px;
+        font-size: 10px;
+        letter-spacing: 3px;
+        font-family: inherit;
+        font-weight: bold;
+        background: rgba(5, 8, 24, 0.65);
+        border: 1px solid rgba(100, 200, 255, 0.4);
+        color: rgba(150, 220, 255, 0.85);
+        cursor: pointer;
+        z-index: 100;
+        transition: all 0.2s;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .mute-btn:hover {
+        border-color: rgba(100, 200, 255, 0.9);
+        color: rgba(220, 240, 255, 1);
+        box-shadow: 0 0 14px rgba(100, 200, 255, 0.4);
+      }
+      .mute-btn.muted {
+        color: rgba(130, 130, 150, 0.65);
+        border-color: rgba(130, 130, 150, 0.3);
+      }
+      .mute-btn.muted:hover {
+        color: rgba(200, 200, 220, 0.9);
+        border-color: rgba(200, 200, 220, 0.6);
+        box-shadow: 0 0 10px rgba(150, 150, 170, 0.3);
+      }
+      .hidden {
+        display: none !important;
+      }
+
+      @media (max-width: 600px) {
+        .hud {
+          top: 14px;
+          left: 14px;
+        }
+        .score {
+          font-size: 28px;
+        }
+        .top-right {
+          top: 14px;
+          right: 14px;
+        }
+        .lives {
+          font-size: 18px;
+        }
+        .legend {
+          gap: 10px;
+          font-size: 9px;
+        }
+        .instructions {
+          grid-template-columns: auto;
+          gap: 8px;
+        }
+        .mute-btn {
+          bottom: 14px;
+          right: 14px;
+          padding: 7px 10px;
+          font-size: 9px;
+          letter-spacing: 2px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="canvas"></canvas>
+
+      <div class="hud hidden" id="hud">
+        <div class="score-label">SCORE</div>
+        <div class="score" id="score">0</div>
+        <div class="combo" id="combo"></div>
+      </div>
+
+      <div class="top-right hidden" id="top-right">
+        <div class="lives" id="lives-display"></div>
+        <div class="wave">WAVE <span id="wave">1</span></div>
+        <div class="bpm"><span id="bpm">100</span> BPM</div>
+      </div>
+
+      <div class="legend hidden" id="legend">
+        <div class="legend-item">
+          <span
+            class="legend-dot"
+            style="background: #64c8ff; color: #64c8ff"
+          ></span
+          >STANDARD · MATCH KEY
+        </div>
+        <div class="legend-item">
+          <span
+            class="legend-dot"
+            style="background: #ffd85a; color: #ffd85a"
+          ></span
+          >STAR · ANY KEY
+        </div>
+        <div class="legend-item">
+          <span
+            class="legend-dot"
+            style="background: #ff64c8; color: #ff64c8"
+          ></span
+          >INVERSE · OPPOSITE KEY
+        </div>
+        <div class="legend-item">
+          <span
+            class="legend-dot"
+            style="background: #6effaa; color: #6effaa"
+          ></span
+          >HOLD · PRESS &amp; HOLD
+        </div>
+      </div>
+
+      <button class="mute-btn" id="mute-btn" title="Mute sound (M)">
+        ♪ SOUND ON
+      </button>
+
+      <div class="overlay" id="start-screen">
+        <div class="title">PULSE</div>
+        <div class="tagline">DEFEND THE CORE. SYNC WITH THE BEAT.</div>
+        <div class="instructions">
+          <div>
+            <span class="key">↑ ↓ ← →</span> or <span class="key">W A S D</span>
+          </div>
+          <div>Match the orb direction</div>
+          <div><span class="key">STANDARD</span> orbs</div>
+          <div>Press the matching arrow when they hit the ring</div>
+          <div><span class="key">STAR</span> orbs (gold)</div>
+          <div>Press ANY direction for 3× points</div>
+          <div><span class="key">INVERSE</span> orbs (pink)</div>
+          <div>Press the OPPOSITE direction</div>
+          <div><span class="key">HOLD</span> orbs (green tail)</div>
+          <div>Press and hold until the tail clears</div>
+        </div>
+        <button class="btn" id="start-btn">BEGIN</button>
+        <div class="btn-hint">PRESS SPACE OR ENTER</div>
+      </div>
+
+      <div class="overlay hidden" id="game-over">
+        <div class="title" style="font-size: clamp(48px, 8vw, 80px)">
+          SILENCE
+        </div>
+        <div class="final-score" id="final-score">0</div>
+        <div class="stats-row">
+          MAX COMBO &nbsp;·&nbsp; <span id="max-combo">0</span>
+        </div>
+        <div class="stats-row">
+          WAVE REACHED &nbsp;·&nbsp; <span id="final-wave">1</span>
+        </div>
+        <div class="stats-row" id="hs-row">
+          HIGH SCORE &nbsp;·&nbsp; <span id="high-score">0</span>
+        </div>
+        <button class="btn" id="restart-btn">AGAIN</button>
+        <div class="btn-hint">PRESS SPACE OR ENTER</div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let W, H, CX, CY, DPR;
+
+        function resize() {
+          DPR = 1; // fixed at 1 for performance on integrated GPUs
+          W = window.innerWidth;
+          H = window.innerHeight;
+          CX = W / 2;
+          CY = H / 2;
+          canvas.width = W * DPR;
+          canvas.height = H * DPR;
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+        resize();
+        window.addEventListener("resize", () => {
+          resize();
+          initBackground();
+          prerenderBackground();
+        });
+
+        // Audio + mute state
+        let audioCtx = null;
+        let muted = false;
+
+        // Cookie persistence (with localStorage fallback for file:// contexts)
+        function saveMutePref(val) {
+          try {
+            document.cookie =
+              "pulse_muted=" +
+              (val ? "1" : "0") +
+              "; path=/; max-age=31536000; SameSite=Lax";
+          } catch (e) {}
+          try {
+            localStorage.setItem("pulse_muted", val ? "1" : "0");
+          } catch (e) {}
+        }
+        function loadMutePref() {
+          try {
+            const m = document.cookie.match(/(?:^|;\s*)pulse_muted=(\d)/);
+            if (m) return m[1] === "1";
+          } catch (e) {}
+          try {
+            const v = localStorage.getItem("pulse_muted");
+            if (v !== null) return v === "1";
+          } catch (e) {}
+          return false;
+        }
+        function applyMuteState() {
+          const btn = document.getElementById("mute-btn");
+          if (btn) {
+            btn.textContent = muted ? "♪ SOUND OFF" : "♪ SOUND ON";
+            btn.classList.toggle("muted", muted);
+          }
+        }
+        function setMuted(val) {
+          muted = !!val;
+          saveMutePref(muted);
+          applyMuteState();
+        }
+        muted = loadMutePref();
+        applyMuteState();
+        function initAudio() {
+          if (audioCtx) return;
+          try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          } catch (e) {}
+        }
+        function tone(freq, dur = 0.12, type = "sine", vol = 0.08, when = 0) {
+          if (!audioCtx || muted) return;
+          const t0 = audioCtx.currentTime + when;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t0);
+          gain.gain.setValueAtTime(vol, t0);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+          osc.start(t0);
+          osc.stop(t0 + dur);
+        }
+        function kick() {
+          if (!audioCtx || muted) return;
+          const t0 = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.setValueAtTime(120, t0);
+          osc.frequency.exponentialRampToValueAtTime(40, t0 + 0.12);
+          gain.gain.setValueAtTime(0.15, t0);
+          gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
+          osc.start(t0);
+          osc.stop(t0 + 0.15);
+        }
+        function hihat() {
+          if (!audioCtx || muted) return;
+          const t0 = audioCtx.currentTime;
+          const buf = audioCtx.createBuffer(
+            1,
+            audioCtx.sampleRate * 0.05,
+            audioCtx.sampleRate,
+          );
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+          const src = audioCtx.createBufferSource();
+          const gain = audioCtx.createGain();
+          const filt = audioCtx.createBiquadFilter();
+          filt.type = "highpass";
+          filt.frequency.value = 6000;
+          src.buffer = buf;
+          src.connect(filt);
+          filt.connect(gain);
+          gain.connect(audioCtx.destination);
+          gain.gain.setValueAtTime(0.04, t0);
+          gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+          src.start(t0);
+        }
+        function noiseBurst(dur = 0.2, vol = 0.1) {
+          if (!audioCtx || muted) return;
+          const t0 = audioCtx.currentTime;
+          const buf = audioCtx.createBuffer(
+            1,
+            audioCtx.sampleRate * dur,
+            audioCtx.sampleRate,
+          );
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < data.length; i++)
+            data[i] =
+              (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 1.5);
+          const src = audioCtx.createBufferSource();
+          const gain = audioCtx.createGain();
+          const filt = audioCtx.createBiquadFilter();
+          filt.type = "lowpass";
+          filt.frequency.value = 1200;
+          src.buffer = buf;
+          src.connect(filt);
+          filt.connect(gain);
+          gain.connect(audioCtx.destination);
+          gain.gain.value = vol;
+          src.start(t0);
+        }
+
+        // Directions (indexed 0..3: UP, RIGHT, DOWN, LEFT)
+        const DIRS = [
+          {
+            idx: 0,
+            angle: -Math.PI / 2,
+            color: { h: 200, s: 100, l: 65, rgb: "100, 200, 255" },
+            name: "UP",
+            label: "↑",
+          },
+          {
+            idx: 1,
+            angle: 0,
+            color: { h: 320, s: 100, l: 70, rgb: "255, 120, 210" },
+            name: "RIGHT",
+            label: "→",
+          },
+          {
+            idx: 2,
+            angle: Math.PI / 2,
+            color: { h: 50, s: 100, l: 65, rgb: "255, 220, 100" },
+            name: "DOWN",
+            label: "↓",
+          },
+          {
+            idx: 3,
+            angle: Math.PI,
+            color: { h: 140, s: 90, l: 65, rgb: "110, 255, 170" },
+            name: "LEFT",
+            label: "←",
+          },
+        ];
+        const KEY_TO_DIR = {
+          ArrowUp: 0,
+          w: 0,
+          W: 0,
+          ArrowRight: 1,
+          d: 1,
+          D: 1,
+          ArrowDown: 2,
+          s: 2,
+          S: 2,
+          ArrowLeft: 3,
+          a: 3,
+          A: 3,
+        };
+
+        // State
+        let state = "start";
+        let score = 0;
+        let highScore = 0;
+        let lives = 3;
+        let combo = 0;
+        let maxCombo = 0;
+        let wave = 1;
+        let bpm = 100;
+        let beatInterval = 60000 / bpm; // ms per beat
+        let beatTimer = 0;
+        let globalBeatCount = 0;
+        let screenShake = 0;
+        let screenPulse = 0;
+        let waveTimer = 0;
+        let waveSpawnCount = 0;
+
+        // Tuning
+        const TRACK_LENGTH = 340; // distance from center where orbs spawn
+        const HIT_RING = 95; // ring radius where you hit orbs
+        const PERFECT_WINDOW = 18;
+        const GOOD_WINDOW = 36;
+        const CORE_RADIUS = 28;
+
+        // Entities
+        let orbs = []; // active orbs traveling inward
+        let particles = [];
+        let floatingText = [];
+        let hitFlashes = [0, 0, 0, 0]; // flash intensity per direction
+        let keyHeld = [false, false, false, false]; // which keys are held down
+        let bgStars = [];
+        let nebulae = [];
+        let ringPulse = 0;
+
+        function initBackground() {
+          bgStars = [];
+          for (let i = 0; i < 220; i++) {
+            bgStars.push({
+              x: Math.random() * W,
+              y: Math.random() * H,
+              r: Math.random() * 1.4 + 0.3,
+              twinkle: Math.random() * Math.PI * 2,
+            });
+          }
+          nebulae = [];
+          for (let i = 0; i < 3; i++) {
+            nebulae.push({
+              x: Math.random() * W,
+              y: Math.random() * H,
+              r: 180 + Math.random() * 260,
+              color: DIRS[Math.floor(Math.random() * 4)].color,
+              drift: Math.random() * 0.1 + 0.02,
+            });
+          }
+        }
+        initBackground();
+
+        // Pre-rendered background sprite (stars + nebulae baked in — avoids per-frame gradient work)
+        let bgSprite = null;
+        function prerenderBackground() {
+          if (!W || !H || W <= 0 || H <= 0) {
+            bgSprite = null;
+            return;
+          }
+          try {
+            const s = document.createElement("canvas");
+            s.width = W;
+            s.height = H;
+            if (!s.width || !s.height) {
+              bgSprite = null;
+              return;
+            }
+            const bctx = s.getContext("2d");
+            if (!bctx) {
+              bgSprite = null;
+              return;
+            }
+            bctx.fillStyle = "#05081a";
+            bctx.fillRect(0, 0, W, H);
+            nebulae.forEach((n) => {
+              const grad = bctx.createRadialGradient(
+                n.x,
+                n.y,
+                0,
+                n.x,
+                n.y,
+                n.r,
+              );
+              grad.addColorStop(0, `rgba(${n.color.rgb}, 0.10)`);
+              grad.addColorStop(0.5, `rgba(${n.color.rgb}, 0.04)`);
+              grad.addColorStop(1, `rgba(${n.color.rgb}, 0)`);
+              bctx.fillStyle = grad;
+              bctx.fillRect(n.x - n.r, n.y - n.r, n.r * 2, n.r * 2);
+            });
+            bgStars.forEach((star) => {
+              const a = 0.35 + Math.random() * 0.4;
+              bctx.fillStyle = `rgba(255, 255, 255, ${a})`;
+              bctx.beginPath();
+              bctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+              bctx.fill();
+            });
+            bgSprite = s;
+          } catch (e) {
+            bgSprite = null;
+          }
+        }
+        prerenderBackground();
+
+        // Pre-rendered core glow sprite
+        let coreGlowSprite = null;
+        function prerenderCoreGlow() {
+          const r = CORE_RADIUS * 2.5;
+          const size = Math.ceil(r * 2);
+          coreGlowSprite = document.createElement("canvas");
+          coreGlowSprite.width = size;
+          coreGlowSprite.height = size;
+          const octx = coreGlowSprite.getContext("2d");
+          const grad = octx.createRadialGradient(r, r, 0, r, r, r);
+          grad.addColorStop(0, "rgba(200, 230, 255, 0.95)");
+          grad.addColorStop(0.3, "rgba(100, 180, 255, 0.55)");
+          grad.addColorStop(1, "rgba(100, 180, 255, 0)");
+          octx.fillStyle = grad;
+          octx.fillRect(0, 0, size, size);
+        }
+        prerenderCoreGlow();
+
+        // Cached glow sprites per color (shared by orbs, key-held indicators, etc.)
+        const glowSpriteCache = {};
+        function getGlowSprite(colorRgb) {
+          if (glowSpriteCache[colorRgb]) return glowSpriteCache[colorRgb];
+          const r = 60;
+          const size = r * 2;
+          const off = document.createElement("canvas");
+          off.width = size;
+          off.height = size;
+          const octx = off.getContext("2d");
+          const grad = octx.createRadialGradient(r, r, 0, r, r, r);
+          grad.addColorStop(0, `rgba(${colorRgb}, 0.9)`);
+          grad.addColorStop(0.3, `rgba(${colorRgb}, 0.35)`);
+          grad.addColorStop(1, `rgba(${colorRgb}, 0)`);
+          octx.fillStyle = grad;
+          octx.fillRect(0, 0, size, size);
+          glowSpriteCache[colorRgb] = off;
+          return off;
+        }
+
+        // Orb factory
+        function makeOrb(dirIdx, type, beatOffset) {
+          // travelBeats = how many beats from now until orb hits the ring
+          const travelBeats = 4;
+          const speed =
+            (TRACK_LENGTH - HIT_RING) / ((travelBeats * beatInterval) / 16.67); // px per frame
+          return {
+            dir: dirIdx,
+            type, // 'std', 'star', 'inv', 'hold'
+            distance: TRACK_LENGTH,
+            speed,
+            hit: false,
+            missed: false,
+            rotation: Math.random() * Math.PI * 2,
+            pulse: 0,
+            // for hold orbs
+            holdLength: type === "hold" ? 24 : 0, // how long tail is (frames of hit)
+            tailCaught: 0,
+            // visual arrival time for shockwaves
+            born: performance.now(),
+          };
+        }
+
+        // Spawn logic — beat-driven
+        function spawnBeat() {
+          if (state !== "playing") return;
+          globalBeatCount++;
+
+          // Audio click
+          if (globalBeatCount % 2 === 0) kick();
+          else hihat();
+          screenPulse = 1;
+
+          // Spawn pattern based on wave
+          waveSpawnCount++;
+          const r = Math.random();
+
+          // skip beats sometimes in early waves for breathing room
+          if (wave === 1 && r < 0.35) return;
+          if (wave === 2 && r < 0.2) return;
+
+          // determine orb type based on wave
+          let type = "std";
+          const typeRoll = Math.random();
+          if (wave >= 5 && typeRoll < 0.1) type = "hold";
+          else if (wave >= 3 && typeRoll < 0.2) type = "inv";
+          else if (typeRoll < 0.08) type = "star"; // always occasional bonus
+
+          // main orb
+          const mainDir = Math.floor(Math.random() * 4);
+          orbs.push(makeOrb(mainDir, type));
+
+          // sometimes double-spawn in later waves (two different directions on same beat)
+          if (wave >= 4 && Math.random() < 0.18) {
+            let d2;
+            do {
+              d2 = Math.floor(Math.random() * 4);
+            } while (d2 === mainDir);
+            orbs.push(makeOrb(d2, "std"));
+          }
+
+          // Wave progression — every ~20 beats tighten the difficulty
+          if (waveSpawnCount >= 20 + wave * 3) {
+            waveSpawnCount = 0;
+            wave++;
+            bpm = Math.min(100 + wave * 8, 180);
+            beatInterval = 60000 / bpm;
+            document.getElementById("wave").textContent = wave;
+            document.getElementById("bpm").textContent = bpm;
+            tone(500, 0.4, "sine", 0.08);
+            tone(750, 0.4, "sine", 0.06, 0.08);
+            addBigText("WAVE " + wave, "150, 220, 255");
+          }
+        }
+
+        function addBigText(text, colorRgb) {
+          floatingText.push({
+            x: CX,
+            y: CY - 140,
+            text,
+            color: colorRgb,
+            life: 1.5,
+            vy: -0.3,
+            big: true,
+          });
+        }
+
+        function addFloatingText(x, y, text, colorRgb) {
+          floatingText.push({
+            x,
+            y,
+            text,
+            color: colorRgb,
+            life: 1,
+            vy: -1.3,
+            big: false,
+          });
+        }
+
+        function spawnParticles(
+          x,
+          y,
+          colorRgb,
+          count = 10,
+          speed = 4,
+          lifeMult = 1,
+        ) {
+          for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const s = Math.random() * speed + 0.5;
+            particles.push({
+              x,
+              y,
+              vx: Math.cos(angle) * s,
+              vy: Math.sin(angle) * s,
+              life: lifeMult,
+              decay: 0.018 + Math.random() * 0.015,
+              color: colorRgb,
+              radius: 1.5 + Math.random() * 3,
+            });
+          }
+        }
+
+        function getOrbPos(orb) {
+          const d = DIRS[orb.dir];
+          return {
+            x: CX + Math.cos(d.angle) * orb.distance,
+            y: CY + Math.sin(d.angle) * orb.distance,
+          };
+        }
+
+        // Handle a key press for a direction
+        function onKeyPress(dirIdx) {
+          if (state !== "playing") return;
+          keyHeld[dirIdx] = true;
+          hitFlashes[dirIdx] = 1;
+          tone(320 + dirIdx * 40, 0.04, "sine", 0.04);
+
+          // Find best orb to score
+          let bestOrb = null;
+          let bestScore = -1;
+
+          for (const orb of orbs) {
+            if (orb.hit || orb.missed) continue;
+            const distFromRing = Math.abs(orb.distance - HIT_RING);
+
+            // Determine matching
+            let matches = false;
+            if (orb.type === "std" || orb.type === "hold") {
+              matches = orb.dir === dirIdx;
+            } else if (orb.type === "star") {
+              matches = true;
+            } else if (orb.type === "inv") {
+              matches = dirIdx === (orb.dir + 2) % 4;
+            }
+
+            if (!matches) continue;
+            if (distFromRing > GOOD_WINDOW) continue;
+
+            // Prefer closer to ring
+            const quality = GOOD_WINDOW - distFromRing;
+            if (quality > bestScore) {
+              bestScore = quality;
+              bestOrb = orb;
+            }
+          }
+
+          if (bestOrb) {
+            hitOrb(bestOrb, dirIdx);
+          }
+          // Note: no penalty for pressing when nothing is in range (keeps it forgiving)
+        }
+
+        function onKeyRelease(dirIdx) {
+          keyHeld[dirIdx] = false;
+        }
+
+        function hitOrb(orb, dirIdx) {
+          const distFromRing = Math.abs(orb.distance - HIT_RING);
+          const pos = getOrbPos(orb);
+
+          let grade;
+          if (distFromRing < PERFECT_WINDOW) grade = "perfect";
+          else grade = "good";
+
+          if (orb.type === "hold") {
+            // Start the hold — orb becomes pinned to the ring, tail dissipates while held
+            orb.holding = true;
+            orb.holdDir = dirIdx;
+            orb.holdStart = performance.now();
+            tone(700, 0.15, "triangle", 0.08);
+            spawnParticles(
+              pos.x,
+              pos.y,
+              orb.typeColor || DIRS[orb.dir].color.rgb,
+              8,
+              3,
+            );
+            return;
+          }
+
+          orb.hit = true;
+
+          let points, colorRgb;
+          if (orb.type === "star") {
+            points = grade === "perfect" ? 300 : 150;
+            colorRgb = "255, 220, 100";
+            addFloatingText(pos.x, pos.y, "★ " + points, colorRgb);
+            tone(900, 0.2, "triangle", 0.1);
+            tone(1350, 0.15, "sine", 0.06, 0.03);
+          } else if (orb.type === "inv") {
+            points = grade === "perfect" ? 200 : 100;
+            colorRgb = "255, 120, 210";
+            addFloatingText(
+              pos.x,
+              pos.y,
+              (grade === "perfect" ? "PERFECT " : "") + "+" + points,
+              colorRgb,
+            );
+            tone(650, 0.18, "triangle", 0.08);
+            tone(980, 0.12, "sine", 0.06, 0.02);
+          } else {
+            // std
+            points = grade === "perfect" ? 100 : 50;
+            colorRgb = DIRS[orb.dir].color.rgb;
+            if (grade === "perfect")
+              addFloatingText(pos.x, pos.y, "PERFECT +" + points, colorRgb);
+            else addFloatingText(pos.x, pos.y, "+" + points, colorRgb);
+            tone(480 + Math.min(combo, 30) * 15, 0.12, "sine", 0.07);
+          }
+
+          // Combo multiplier
+          combo++;
+          if (combo > maxCombo) maxCombo = combo;
+          const mult = 1 + Math.floor(combo / 10) * 0.5;
+          points = Math.floor(points * mult);
+          score += points;
+
+          // Perfect bonus juice
+          if (grade === "perfect") {
+            spawnParticles(pos.x, pos.y, colorRgb, 18, 5.5, 1.1);
+            screenShake = Math.max(screenShake, 3);
+          } else {
+            spawnParticles(pos.x, pos.y, colorRgb, 10, 3.5);
+          }
+
+          updateScoreUI();
+        }
+
+        function missOrb(orb) {
+          orb.missed = true;
+          combo = 0;
+          lives--;
+          const pos = getOrbPos(orb);
+          spawnParticles(CX, CY, "255, 90, 90", 24, 6, 1);
+          spawnParticles(pos.x, pos.y, "255, 90, 90", 14, 4);
+          addFloatingText(CX, CY - 55, "MISS", "255, 100, 100");
+          tone(180, 0.3, "sawtooth", 0.12);
+          noiseBurst(0.15, 0.08);
+          screenShake = 16;
+          updateLivesUI();
+          updateScoreUI();
+          if (lives <= 0) endGame();
+        }
+
+        function updateScoreUI() {
+          document.getElementById("score").textContent = score.toLocaleString();
+          const comboEl = document.getElementById("combo");
+          if (combo >= 2) {
+            comboEl.textContent = `COMBO ×${combo}${combo >= 10 ? " · ×" + (1 + Math.floor(combo / 10) * 0.5).toFixed(1) : ""}`;
+            comboEl.classList.remove("shake");
+            void comboEl.offsetWidth;
+            comboEl.classList.add("shake");
+          } else {
+            comboEl.textContent = "";
+          }
+        }
+        function updateLivesUI() {
+          document.getElementById("lives-display").textContent = "◆ "
+            .repeat(lives)
+            .trim();
+        }
+
+        function startGame() {
+          initAudio();
+          state = "playing";
+          score = 0;
+          lives = 3;
+          combo = 0;
+          maxCombo = 0;
+          wave = 1;
+          bpm = 100;
+          beatInterval = 60000 / bpm;
+          beatTimer = 0;
+          globalBeatCount = 0;
+          waveSpawnCount = 0;
+          screenShake = 0;
+          screenPulse = 0;
+          orbs = [];
+          particles = [];
+          floatingText = [];
+          hitFlashes = [0, 0, 0, 0];
+          keyHeld = [false, false, false, false];
+
+          document.getElementById("start-screen").classList.add("hidden");
+          document.getElementById("game-over").classList.add("hidden");
+          document.getElementById("hud").classList.remove("hidden");
+          document.getElementById("top-right").classList.remove("hidden");
+          document.getElementById("legend").classList.remove("hidden");
+          document.getElementById("wave").textContent = wave;
+          document.getElementById("bpm").textContent = bpm;
+          updateLivesUI();
+          updateScoreUI();
+        }
+
+        function endGame() {
+          state = "over";
+          const isNewHigh = score > highScore;
+          if (isNewHigh) highScore = score;
+          document.getElementById("final-score").textContent =
+            score.toLocaleString();
+          document.getElementById("max-combo").textContent = maxCombo;
+          document.getElementById("final-wave").textContent = wave;
+          const hsRow = document.getElementById("hs-row");
+          if (isNewHigh && score > 0) {
+            hsRow.innerHTML = `<span class="new-hs">NEW HIGH SCORE &nbsp;·&nbsp; ${score.toLocaleString()}</span>`;
+          } else {
+            hsRow.innerHTML = `HIGH SCORE &nbsp;·&nbsp; <span id="high-score">${highScore.toLocaleString()}</span>`;
+          }
+          document.getElementById("game-over").classList.remove("hidden");
+          document.getElementById("hud").classList.add("hidden");
+          document.getElementById("top-right").classList.add("hidden");
+          document.getElementById("legend").classList.add("hidden");
+          spawnParticles(CX, CY, "255, 100, 100", 60, 8, 1.3);
+          screenShake = 24;
+          noiseBurst(0.4, 0.14);
+          tone(100, 0.5, "sawtooth", 0.12);
+          tone(80, 0.6, "sine", 0.08, 0.1);
+        }
+
+        // Input
+        window.addEventListener("keydown", (e) => {
+          if (e.repeat) return;
+          // mute toggle
+          if (e.key === "m" || e.key === "M") {
+            setMuted(!muted);
+            e.preventDefault();
+            return;
+          }
+          // start / restart via space/enter
+          if (e.key === " " || e.key === "Enter") {
+            if (state === "start" || state === "over") {
+              startGame();
+              e.preventDefault();
+              return;
+            }
+          }
+          const d = KEY_TO_DIR[e.key];
+          if (d !== undefined) {
+            e.preventDefault();
+            onKeyPress(d);
+          }
+        });
+        window.addEventListener("keyup", (e) => {
+          const d = KEY_TO_DIR[e.key];
+          if (d !== undefined) onKeyRelease(d);
+        });
+        document
+          .getElementById("start-btn")
+          .addEventListener("click", startGame);
+        document
+          .getElementById("restart-btn")
+          .addEventListener("click", startGame);
+        document.getElementById("mute-btn").addEventListener("click", () => {
+          initAudio(); // Unlock audio context on click in case they toggle before starting
+          setMuted(!muted);
+        });
+
+        // Update & Draw
+        let lastTime = performance.now();
+        function update(dt) {
+          // Hit flashes & ring pulse decay
+          for (let i = 0; i < 4; i++) hitFlashes[i] *= 0.88;
+          ringPulse *= 0.92;
+          screenPulse *= 0.9;
+          screenShake *= 0.86;
+          if (screenShake < 0.1) screenShake = 0;
+
+          if (state === "playing") {
+            // Beat loop
+            beatTimer += dt;
+            if (beatTimer >= beatInterval) {
+              beatTimer -= beatInterval;
+              spawnBeat();
+            }
+
+            // Move orbs
+            for (const orb of orbs) {
+              if (orb.hit || orb.missed) continue;
+
+              if (orb.type === "hold" && orb.holding) {
+                // Pinned to ring; consume tail while held
+                if (keyHeld[orb.holdDir]) {
+                  orb.tailCaught++;
+                  if (orb.tailCaught >= orb.holdLength) {
+                    // Successful hold completion
+                    orb.hit = true;
+                    const pos = getOrbPos(orb);
+                    combo++;
+                    if (combo > maxCombo) maxCombo = combo;
+                    const mult = 1 + Math.floor(combo / 10) * 0.5;
+                    const pts = Math.floor(250 * mult);
+                    score += pts;
+                    addFloatingText(
+                      pos.x,
+                      pos.y,
+                      "+" + pts + " HOLD!",
+                      "110, 255, 170",
+                    );
+                    spawnParticles(pos.x, pos.y, "110, 255, 170", 20, 5, 1.1);
+                    tone(880, 0.2, "triangle", 0.1);
+                    tone(1320, 0.15, "sine", 0.06, 0.02);
+                    screenShake = Math.max(screenShake, 4);
+                    updateScoreUI();
+                  }
+                } else {
+                  // Released too early — mark as missed
+                  missOrb(orb);
+                }
+                continue;
+              }
+
+              orb.distance -= orb.speed * (dt / 16.67);
+              orb.pulse += 0.12;
+
+              // If orb passes inside hit ring without being hit, it's a miss
+              if (
+                orb.distance < HIT_RING - GOOD_WINDOW &&
+                !orb.hit &&
+                !orb.missed
+              ) {
+                missOrb(orb);
+              }
+            }
+
+            // Clean up orbs
+            orbs = orbs.filter(
+              (o) =>
+                !((o.hit || o.missed) && performance.now() - o.born > 200) &&
+                o.distance > -50,
+            );
+          }
+
+          // Particles
+          particles.forEach((p) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.95;
+            p.vy *= 0.95;
+            p.life -= p.decay;
+          });
+          particles = particles.filter((p) => p.life > 0);
+
+          // Floating text
+          floatingText.forEach((f) => {
+            f.y += f.vy;
+            f.vy *= f.big ? 1 : 0.96;
+            f.life -= f.big ? 0.012 : 0.022;
+          });
+          floatingText = floatingText.filter((f) => f.life > 0);
+        }
+
+        function draw() {
+          const sx = (Math.random() - 0.5) * screenShake;
+          const sy = (Math.random() - 0.5) * screenShake;
+          ctx.save();
+          ctx.translate(sx, sy);
+
+          // Background (pre-rendered — stars & nebulae baked in, drawn as single sprite)
+          if (bgSprite && bgSprite.width > 0 && bgSprite.height > 0) {
+            ctx.drawImage(bgSprite, 0, 0);
+          } else {
+            ctx.fillStyle = "#05081a";
+            ctx.fillRect(0, 0, W, H);
+            // Try to re-create the sprite for future frames
+            if (W > 0 && H > 0) prerenderBackground();
+          }
+
+          // Beat pulse — faint expanding ring
+          if (screenPulse > 0.01) {
+            ctx.strokeStyle = `rgba(150, 200, 255, ${screenPulse * 0.15})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(
+              CX,
+              CY,
+              TRACK_LENGTH + (1 - screenPulse) * 120,
+              0,
+              Math.PI * 2,
+            );
+            ctx.stroke();
+          }
+
+          // Draw 4 tracks (faint guides)
+          DIRS.forEach((d, i) => {
+            const flash = hitFlashes[i];
+            const endX = CX + Math.cos(d.angle) * TRACK_LENGTH;
+            const endY = CY + Math.sin(d.angle) * TRACK_LENGTH;
+            const ringX = CX + Math.cos(d.angle) * HIT_RING;
+            const ringY = CY + Math.sin(d.angle) * HIT_RING;
+
+            // Track line
+            const grad = ctx.createLinearGradient(CX, CY, endX, endY);
+            grad.addColorStop(0, `rgba(${d.color.rgb}, ${0.05 + flash * 0.3})`);
+            grad.addColorStop(
+              0.3,
+              `rgba(${d.color.rgb}, ${0.15 + flash * 0.4})`,
+            );
+            grad.addColorStop(1, `rgba(${d.color.rgb}, ${0.02 + flash * 0.1})`);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 2 + flash * 3;
+            ctx.beginPath();
+            ctx.moveTo(ringX, ringY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            // Arrow indicator at the far end
+            ctx.save();
+            ctx.translate(endX, endY);
+            ctx.rotate(d.angle);
+            ctx.fillStyle = `rgba(${d.color.rgb}, ${0.35 + flash * 0.65})`;
+            ctx.font = "bold 18px Courier New, monospace";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.rotate(-d.angle); // Keep text upright
+            const offX = Math.cos(d.angle) * 25;
+            const offY = Math.sin(d.angle) * 25;
+            ctx.fillText(d.label, offX, offY);
+            ctx.restore();
+          });
+
+          // Hit ring
+          const ringAlpha = 0.35 + ringPulse * 0.4;
+          ctx.strokeStyle = `rgba(180, 220, 255, ${ringAlpha})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(CX, CY, HIT_RING, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Inner target indicator (perfect ring)
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.12 + ringPulse * 0.2})`;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 4]);
+          ctx.beginPath();
+          ctx.arc(CX, CY, HIT_RING, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Draw orbs
+          for (const orb of orbs) {
+            if (orb.hit) continue;
+            const pos = getOrbPos(orb);
+            const dir = DIRS[orb.dir];
+
+            // For inverse, visually mark from the opposite direction
+            let orbColorRgb = dir.color.rgb;
+            if (orb.type === "star") orbColorRgb = "255, 220, 100";
+            else if (orb.type === "inv") orbColorRgb = "255, 120, 210";
+            else if (orb.type === "hold") orbColorRgb = "110, 255, 170";
+
+            // Hold tail: line from spawn to orb
+            if (orb.type === "hold") {
+              const tailStart = orb.holding
+                ? {
+                    x:
+                      CX +
+                      Math.cos(dir.angle) *
+                        (HIT_RING + 60 * (1 - orb.tailCaught / orb.holdLength)),
+                    y:
+                      CY +
+                      Math.sin(dir.angle) *
+                        (HIT_RING + 60 * (1 - orb.tailCaught / orb.holdLength)),
+                  }
+                : {
+                    x: CX + Math.cos(dir.angle) * (orb.distance + 70),
+                    y: CY + Math.sin(dir.angle) * (orb.distance + 70),
+                  };
+              ctx.strokeStyle = `rgba(${orbColorRgb}, 0.55)`;
+              ctx.lineWidth = 6;
+              ctx.lineCap = "round";
+              ctx.beginPath();
+              ctx.moveTo(tailStart.x, tailStart.y);
+              ctx.lineTo(pos.x, pos.y);
+              ctx.stroke();
+              ctx.lineCap = "butt";
+            }
+
+            const radius = 14;
+
+            // Glow (cached sprite — huge perf win over per-frame gradients)
+            const glowSpr = getGlowSprite(orbColorRgb);
+            const gr = radius * 3.5;
+            ctx.drawImage(glowSpr, pos.x - gr, pos.y - gr, gr * 2, gr * 2);
+
+            // Body
+            ctx.save();
+            ctx.translate(pos.x, pos.y);
+            ctx.rotate(orb.rotation + orb.pulse * 0.02);
+
+            if (orb.type === "star") {
+              // 5-point star
+              ctx.fillStyle = `hsl(50, 100%, 75%)`;
+              ctx.strokeStyle = "rgba(255,255,255,0.95)";
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              const pulseSc = 1 + Math.sin(orb.pulse) * 0.15;
+              for (let i = 0; i < 10; i++) {
+                const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+                const r = (i % 2 === 0 ? radius : radius * 0.5) * pulseSc;
+                const px = Math.cos(a) * r,
+                  py = Math.sin(a) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              }
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+            } else if (orb.type === "inv") {
+              // Diamond with inner arrow pointing AWAY from travel direction (showing "opposite")
+              ctx.fillStyle = `hsl(320, 100%, 72%)`;
+              ctx.strokeStyle = "rgba(255,255,255,0.95)";
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              const r = radius * 1.1;
+              ctx.moveTo(0, -r);
+              ctx.lineTo(r, 0);
+              ctx.lineTo(0, r);
+              ctx.lineTo(-r, 0);
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+              // Inner reverse-arrow symbol
+              ctx.fillStyle = "rgba(255,255,255,0.95)";
+              ctx.font = "bold 14px Courier New, monospace";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.rotate(-orb.rotation - orb.pulse * 0.02); // keep text upright
+              ctx.fillText("↺", 0, 1);
+            } else if (orb.type === "hold") {
+              // Hexagon
+              ctx.fillStyle = `hsl(140, 90%, 70%)`;
+              ctx.strokeStyle = "rgba(255,255,255,0.95)";
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2;
+                const px = Math.cos(a) * radius,
+                  py = Math.sin(a) * radius;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              }
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+            } else {
+              // Standard circle
+              ctx.fillStyle = `hsl(${dir.color.h}, ${dir.color.s}%, ${dir.color.l + 10}%)`;
+              ctx.strokeStyle = "rgba(255,255,255,0.95)";
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(
+                0,
+                0,
+                radius * (1 + Math.sin(orb.pulse) * 0.05),
+                0,
+                Math.PI * 2,
+              );
+              ctx.fill();
+              ctx.stroke();
+              // Inner glint
+              ctx.fillStyle = "rgba(255,255,255,0.8)";
+              ctx.beginPath();
+              ctx.arc(
+                -radius * 0.3,
+                -radius * 0.3,
+                radius * 0.3,
+                0,
+                Math.PI * 2,
+              );
+              ctx.fill();
+            }
+            ctx.restore();
+
+            // Highlight ring when close to hit zone
+            const distFromRing = Math.abs(orb.distance - HIT_RING);
+            if (distFromRing < GOOD_WINDOW && !orb.holding) {
+              const quality = 1 - distFromRing / GOOD_WINDOW;
+              ctx.strokeStyle = `rgba(255, 255, 255, ${quality * 0.7})`;
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(
+                pos.x,
+                pos.y,
+                radius + 6 + (1 - quality) * 10,
+                0,
+                Math.PI * 2,
+              );
+              ctx.stroke();
+            }
+          }
+
+          // Key-held indicators (small dots at the outer end of each track)
+          DIRS.forEach((d, i) => {
+            if (keyHeld[i]) {
+              const px = CX + Math.cos(d.angle) * (TRACK_LENGTH + 40);
+              const py = CY + Math.sin(d.angle) * (TRACK_LENGTH + 40);
+              const glowSpr = getGlowSprite(d.color.rgb);
+              ctx.drawImage(glowSpr, px - 22, py - 22, 44, 44);
+              ctx.fillStyle = `rgba(${d.color.rgb}, 0.95)`;
+              ctx.beginPath();
+              ctx.arc(px, py, 6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+
+          // Core glow (cached sprite)
+          if (coreGlowSprite) {
+            const cr = CORE_RADIUS * 2.5;
+            ctx.drawImage(coreGlowSprite, CX - cr, CY - cr, cr * 2, cr * 2);
+          }
+
+          ctx.fillStyle = `rgba(255, 255, 255, ${0.85 + screenPulse * 0.15})`;
+          ctx.beginPath();
+          ctx.arc(
+            CX,
+            CY,
+            CORE_RADIUS * (1 + screenPulse * 0.1),
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+          ctx.strokeStyle = "rgba(150, 220, 255, 0.9)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Particles
+          particles.forEach((p) => {
+            ctx.fillStyle = `rgba(${p.color}, ${Math.min(p.life, 1)})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius * Math.max(p.life, 0.1), 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Floating text
+          floatingText.forEach((f) => {
+            ctx.globalAlpha = Math.min(f.life, 1);
+            ctx.fillStyle = `rgba(${f.color}, 1)`;
+            ctx.font = f.big
+              ? "bold 28px Courier New, monospace"
+              : "bold 15px Courier New, monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(f.text, f.x, f.y);
+            ctx.globalAlpha = 1;
+          });
+
+          ctx.restore();
+        }
+
+        function loop(now) {
+          const dt = Math.min(now - lastTime, 50);
+          lastTime = now;
+          update(dt);
+          draw();
+          requestAnimationFrame(loop);
+        }
+        requestAnimationFrame((now) => {
+          lastTime = now;
+          loop(now);
+        });
+      })();
+    </script>
+  </body>
+</html>
