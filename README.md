@@ -14,7 +14,7 @@ python3 -m http.server
 
 ## Structure
 
-`index.html` is the landing page, `assets/` holds shared assets, and `content/` contains each game in its own directory, with `content/third-party/` reserved for external games (each entry is a folder with a thumbnail and a `game.json`).
+`index.html` is the landing page, `assets/` holds shared assets, and `content/` contains each game in its own directory, with `content/third-party/` reserved for external games (each entry is a folder with a thumbnail and a `game.json`). Third-party entries are marked with a ↯ on the landing page to indicate they live outside this repo.
 
 ## Adding a third-party game
 
