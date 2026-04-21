@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>3D Transcendental</title>
+    <link rel="icon" type="image/png" href="./logo.png" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .toolbar {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 9999;
+        display: flex;
+        gap: 6px;
+      }
+
+      .toolbar button {
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 6px 10px;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+
+      iframe {
+        border: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button id="refreshBtn">Refresh</button>
+      <button id="modeBtn">Light</button>
+    </div>
+
+    <iframe id="efIframe" src="https://www.efgroupinc.com/?zen=void"></iframe>
+
+    <script>
+      const iframe = document.getElementById("efIframe");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const modeBtn = document.getElementById("modeBtn");
+
+      let isDark = true;
+
+      refreshBtn.addEventListener("click", function () {
+        const currentSrc = iframe.src;
+        iframe.src = "";
+        iframe.src = currentSrc;
+      });
+
+      modeBtn.addEventListener("click", function () {
+        isDark = !isDark;
+
+        if (isDark) {
+          iframe.src = "https://www.efgroupinc.com/?zen=void";
+          modeBtn.textContent = "Light";
+        } else {
+          iframe.src = "https://www.efgroupinc.com/?zen=glow";
+          modeBtn.textContent = "Dark";
+        }
+      });
+    </script>
+  </body>
+</html>
